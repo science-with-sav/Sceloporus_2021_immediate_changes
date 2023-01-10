@@ -1,0 +1,554 @@
+---
+title: "Acute changes in CEWL for dead lizards"
+author: "Calvin Davis, Savannah Weaver"
+date: "2022"
+output: pdf_document
+toc: TRUE
+---
+
+
+# Packages
+
+```{r setup, echo=T, results='hide', message=FALSE}
+`%nin%` = Negate(`%in%`)
+if (!require("tidyverse")) install.packages("tidyverse") 
+library("tidyverse") #tidyr, ggplot, dplyr, etc
+if (!require("ggpubr")) install.packages("ggpubr") 
+library("ggpubr") # arrange multi-figures
+if (!require("RColorBrewer")) install.packages("RColorBrewer") 
+library("RColorBrewer") # colors
+```
+
+
+
+ 
+# Load Data
+
+
+## CEWL
+
+Get filenames:
+
+```{r CEWL filenames}
+# make a list of file names of all data to load in
+filenames_dead_aquaflux <- (list.files(path = "./Data/dead lizards/R format", 
+                                 pattern = "csv"))[1:6]
+```
+
+Make a function that will read in the data from each csv, name and organize the data correctly. 
+
+Variables: 
+- time sec = time recording from Evaporimeter 
+- CEWL_g_m2h = cutaneous evaportive water loss 
+- msmt_temp_C = ambient temperature in celcius 
+- msmt_RH_percent = % relative ambient humidity 
+
+```{r function to load CEWL data}
+read_dead_CEWL_file <- function(filename_dead) {
+  
+   # save helpful info
+   name <- trimws(substr(filename_dead, 6, 13))
+   treatment <- trimws(substr(filename_dead, 15, 21))
+   
+   ## load file
+   dat_dead <- read.csv(file.path("./Data/dead lizards/R format", filename_dead), 
+                        header = TRUE) %>%
+      # select only the relevant values
+      dplyr::select(time_sec = 'Time..sec.',
+                    CEWL_g_m2h = 'Flux..g..m2h..', 
+                    msmt_temp_C = 'AmbT..C.', 
+                    msmt_RH_percent = 'AmbRH....'
+                    ) %>%
+      # use filename info     
+      dplyr::mutate(lizard_ID = (name),
+                    treatment = (treatment))
+   # return the dataframe for that single csv file
+   dat_dead
+   
+}
+```
+
+
+
+Apply function to all files, compile, and incorporate timing:
+
+```{r load and filter CEWL data}
+# apply function to get data from all csvs
+all_dead_CEWL_data <- lapply(filenames_dead_aquaflux, read_dead_CEWL_file) %>%
+   # paste all data files together into one df by row
+   reduce(rbind) %>%
+   # properly format data classes
+   mutate(lizard_ID = as.factor(lizard_ID),
+          treatment = as.factor(treatment),
+          liz_tmt = as.factor(paste(substr(lizard_ID, 8, 8), treatment)),
+          time_sec = floor(as.numeric(time_sec)),
+          CEWL_g_m2h = as.numeric(CEWL_g_m2h),
+          msmt_temp_C = as.numeric(msmt_temp_C),
+          msmt_RH_percent = as.numeric(msmt_RH_percent))
+
+summary(all_dead_CEWL_data)
+```
+
+
+
+
+### Equilibration
+
+The evaporimeter also takes 1-2 minutes to equilibrate to the lizard at the start of each time series, so we want to estimate when equilibration was complete for each lizard.
+
+Previously, we found the peak during the equilibrium period, then cut out that data up to 60 seconds after the peak. However, not all the data for the dead lizards decreased again, so we will just filter out the first 90 seconds (1.5 minutes).
+
+```{r find when equilibrated}
+ggplot(data = all_dead_CEWL_data,
+       aes(x = time_sec,
+           y = CEWL_g_m2h, 
+           color = treatment)) + 
+   geom_point(size = 0.5, alpha = 0.5) + 
+   geom_vline(xintercept = 70)
+```
+
+
+
+filter:
+
+```{r}
+dead_CEWL_data_filtered <- all_dead_CEWL_data %>%
+  dplyr::filter(time_sec > 89)
+```
+
+
+
+
+
+
+
+### Time Series df 
+
+add start times/ actual times and relative CEWL:
+
+```{r}
+start_CEWL <- dead_CEWL_data_filtered %>%
+  dplyr::filter(time_sec == 90) %>%
+  dplyr::select(lizard_ID, treatment,
+                start_CEWL = CEWL_g_m2h)
+
+CEWL_time <- dead_CEWL_data_filtered %>%
+          # get actual time for joining temperature data
+  mutate(start_time = case_when(lizard_ID == "lizard A" & treatment == "control" ~
+                                  "15:07:15",
+                                lizard_ID == "lizard A" & treatment == "cooling" ~
+                                  "16:16:25",
+                                lizard_ID == "lizard A" & treatment == "heating" ~
+                                  "17:01:05",
+                                lizard_ID == "lizard D" & treatment == "control" ~
+                                  "14:42:10",
+                                lizard_ID == "lizard D" & treatment == "cooling" ~
+                                  "16:39:32",
+                                lizard_ID == "lizard D" & treatment == "heating" ~
+                                  "15:38:19"
+                                  ),
+         start_date_time = as.POSIXct(paste("2022-06-29", start_time, sep = " "), 
+                                      format = "%Y-%m-%d %H:%M:%S"),
+         date_time = start_date_time + time_sec) %>%
+  left_join(start_CEWL, by = c("lizard_ID", "treatment")) %>%
+  mutate(relative_CEWL = CEWL_g_m2h - start_CEWL,
+         # get diff time format
+         time_min = time_sec/60) %>%
+  dplyr::select(lizard_ID, treatment, liz_tmt, 
+                time_min, date_time,
+                CEWL_g_m2h, relative_CEWL)
+
+summary(CEWL_time)
+```
+
+
+
+
+
+## Thermocouples
+
+Get filenames:
+
+```{r TC filenames}
+# make a list of file names of all data to load in
+filenames_dead_TC <- (list.files(path = "./Data/dead lizards/TC", 
+                                 pattern = "csv"))[2:6]
+```
+
+Make a function that will read in the data from each csv, name and organize the data correctly. 
+
+```{r function to load TC data}
+read_dead_TC_file <- function(filename_dead) {
+  
+   # save helpful info
+   name <- trimws(substr(filename_dead, 12, 12))
+   treatment <- trimws(substr(filename_dead, 13, 20))
+   
+   ## load file
+   dat_dead <- read.csv(file.path("./Data/dead lizards/TC", filename_dead), 
+                        header = TRUE) %>%
+      # use filename info     
+      dplyr::mutate(lizard_ID = paste("lizard",name, sep = " "),
+                    treatment = (treatment))
+   # return the dataframe for that single csv file
+   dat_dead
+}
+```
+
+
+Apply function to all files, compile, and incorporate timing:
+
+```{r load and filter TC data}
+# apply function to get data from all csvs
+all_dead_TC_data <- lapply(filenames_dead_TC, read_dead_TC_file) %>%
+   # paste all data files together into one df by row
+   reduce(rbind) %>%
+   # get rid of empty cells
+   dplyr::filter(complete.cases(Time, Value)) %>%
+   # properly format data classes
+   mutate(lizard_ID = as.factor(lizard_ID),
+          treatment = as.factor(treatment),
+          date_time = as.POSIXct(paste(Date, Time), 
+                                 format = "%m/%d/%y %H:%M:%S")) %>%
+  dplyr::select(date_time, lizard_ID, treatment, temp_C = Value)
+
+summary(all_dead_TC_data)
+```
+
+### TC Calibration
+
+The thermocouples tend to drift 1-2 C off of the true temperature, so we collected reference data to make a calibration curve for each one.
+
+Get all the data and organize:
+
+```{r load TC calibration data}
+calibration_logger <- read.csv("./Data/dead lizards/TC/thermocouple_calibration.csv",  header = TRUE) %>%
+  mutate(date_time = round(as.POSIXct(paste(Date, Time), 
+                                      format = "%m/%d/%y %H:%M:%S"), 
+                           "mins"))
+
+calibration_reference <- read.csv("./Data/dead lizards/TC/thermocouple_reference.csv",  header = TRUE)  %>%
+   mutate(date = "6/21/22",
+          date_time = as.POSIXct(paste(date, time), format = "%m/%d/%y %H:%M")) %>%
+  dplyr::select(date_time, ref_temp_C)
+
+calibration_A <- calibration_logger %>% # port 1 = TC A = lizard A
+  dplyr::select(date_time, temp_C = Value, Unit) %>%
+  left_join(calibration_reference, by = 'date_time') %>%
+  dplyr::filter(complete.cases(ref_temp_C))
+
+calibration_D <- calibration_logger %>% # port 4 = TC D = lizard D
+  dplyr::select(date_time, temp_C = Value.3, Unit.3) %>%
+  left_join(calibration_reference, by = 'date_time') %>%
+  dplyr::filter(complete.cases(ref_temp_C))
+```
+
+Next, calculate and save regression curves:
+
+```{r calculate thermocouple calibration curves}
+# calculate regression curves
+regression_a_dead <- lm(data = calibration_A,
+                        temp_C ~ ref_temp_C) 
+regression_d_dead <- lm(data = calibration_D,
+                        temp_C ~ ref_temp_C)
+
+# store calibration values
+a_intercept <- coef(regression_a_dead)[1]
+a_slope <- coef(regression_a_dead)[2]
+d_intercept <- coef(regression_d_dead)[1]
+d_slope <- coef(regression_d_dead)[2]
+```
+
+Finally, use calibration curves to correct the data we measured:
+
+```{r apply thermocouple calibration curves}
+all_dead_TC_data_calibrated <- all_dead_TC_data %>%
+   mutate(calibrated_cloacal_temp_C = case_when(lizard_ID == "lizard A" ~
+                                                  (a_intercept + temp_C*a_slope),
+                                                lizard_ID == "lizard D" ~
+                                                  (d_intercept + temp_C*d_slope))
+                  )
+summary(all_dead_TC_data_calibrated)
+```
+
+
+
+
+
+### Time Temp df
+
+```{r join all dataframes}
+CEWL_time_temp <- CEWL_time %>%
+   left_join(all_dead_TC_data_calibrated, 
+             by = c('date_time', 'lizard_ID', 'treatment')) %>%
+   dplyr::select(-temp_C)
+
+summary(CEWL_time_temp)
+
+nrow(CEWL_time_temp) - 4711 # this is the # of temperature measurements we were able to apply
+```
+
+I double-checked we didn't miss attaching any temp data. We attached 65 temp measurements of the 93 we had, which is correct because ~10 temp datapoints were recorded before the aquaflux was started (in total across measurement periods) and we also trimmed the first minute off each measurement period.
+
+
+## Subset Tmts/Individual
+
+We did all 3 treatments on both individuals...
+For lizard A, we did control, cooling, then heating.
+For lizard D, we did control, heating, then cooling.
+
+We've decided that we will present each lizard's control data, and the first treatment each lizard did. So, cooling for lizard A and heating for lizard D.
+
+```{r}
+A_ctrl_cool <- CEWL_time_temp %>%
+  dplyr::filter(lizard_ID == "lizard A") %>%
+  dplyr::filter(treatment %in% c("cooling", "control"))
+summary(A_ctrl_cool)
+
+D_ctrl_heat <- CEWL_time_temp %>%
+  dplyr::filter(lizard_ID == "lizard D") %>%
+  dplyr::filter(treatment %in% c("heating", "control"))
+summary(D_ctrl_heat)
+
+CEWL_time_temp_subset <- D_ctrl_heat %>%
+  rbind(A_ctrl_cool)
+summary(CEWL_time_temp_subset)
+```
+
+
+
+
+# Stats
+
+Compare CEWL at a common body temp to the live lizards.
+
+```{r}
+# prepare dead lizard data
+mean_CEWL_temp_dead <- CEWL_time_temp_subset %>%
+  mutate(rounded_cal_c_temp = round(calibrated_cloacal_temp_C, 0)) %>%
+  dplyr::filter(complete.cases(rounded_cal_c_temp)) %>%
+  group_by(lizard_ID, treatment, liz_tmt, rounded_cal_c_temp) %>%
+  summarise(mean_CEWL = mean(CEWL_g_m2h),
+            n = n())
+
+# compare heating tmt dead vs live
+# note, I use dfs created in the acute changes file
+#heating_compare <- mean_CEWL_temp_dead %>%
+ # dplyr::filter(treatment == "heating") %>%
+  #dplyr::select(treatment, rounded_cal_c_temp, heating_mean_CEWL_dead = mean_CEWL) %>%
+#  left_join(heat_CEWL, by = 'rounded_cal_c_temp') %>%
+ # mutate(dead_minus_live_diff = heating_mean_CEWL_dead - heating_mm_CEWL)
+
+#heating_compare %>%
+ # summarise(mean(dead_minus_live_diff), sd(dead_minus_live_diff), max(dead_minus_live_diff), min(dead_minus_live_diff))
+
+# compare cooling tmt dead vs live
+# note, I use dfs created in the acute changes file
+#cooling_compare <- mean_CEWL_temp_dead %>%
+ # dplyr::filter(treatment == "cooling") %>%
+  #dplyr::select(treatment, rounded_cal_c_temp, cooling_mean_CEWL_dead = mean_CEWL) %>%
+#  left_join(cool_CEWL, by = 'rounded_cal_c_temp') %>%
+ # mutate(dead_minus_live_diff = cooling_mean_CEWL_dead - cooling_mm_CEWL)
+
+#cooling_compare %>%
+ # summarise(mean(dead_minus_live_diff, na.rm = T), sd(dead_minus_live_diff, na.rm = T), max(dead_minus_live_diff, na.rm = T), min(dead_minus_live_diff, na.rm = T))
+```
+
+
+
+# Figures
+
+## color
+
+```{r}
+cool  <- c(brewer.pal(11, "RdYlBu")[c(10)])
+heat  <- c(brewer.pal(11, "RdYlBu")[c(1)])
+control1  <- c(brewer.pal(9, "Greys")[c(7)])
+control2  <- c(brewer.pal(9, "Greys")[c(5)])
+```
+
+
+## CEWL (relative) ~ time
+
+*manuscript*
+
+```{r relative CEWL time}
+ggplot(CEWL_time_temp_subset) +
+   geom_point(aes(x= time_min, 
+                  y = relative_CEWL,
+                  shape = treatment,
+                  color = liz_tmt),
+              size = 0.5, 
+              alpha = 0.5) +
+  #geom_smooth(aes(x = (time_min), 
+   #    y = relative_CEWL,
+    #   color = liz_tmt),
+     #  method = "lm", 
+      #  formula = y ~ poly(x, 2),
+       #        size = 1, 
+        #       se = F) +
+   geom_hline(yintercept = 0, size = 0.5,
+              linetype = "dashed", color = "black") +
+   theme_classic() +
+   theme(text = element_text(color = "black", 
+                            family = "sans", 
+                            size = 12),
+        axis.text = element_text(color = "black", 
+                                 family = "sans", 
+                                 size = 8),
+        legend.text = element_text(color = "black", 
+                                 family = "sans", 
+                                 size = 12),
+        legend.position = "none") +
+   scale_shape_manual(values = c(21,25,24),
+                     name = "Treatment") + 
+   scale_color_manual(values = c("A control" = control1,
+                                 "D control" = control2,
+                                     "A cooling" = cool,  
+                                     "D heating" = heat),
+                      name = "Treatment") +
+  
+   annotate("text", label = "Cool", 
+            x = 15, y = -8.5, size = 4, color = cool) +
+   annotate("text", label = "Control[Cool]", parse = T,
+            x = 14.8, y = -2.8, size = 3, color = control1) + 
+   
+   annotate("text", label = "Heat", 
+            x = 15, y = 24, size = 4, color = heat) +
+   annotate("text", label = "Control[Heat]", parse = T,
+            x = 14.8, y = 3.8, size = 3, color = control2) + 
+  
+   scale_x_continuous(limits = c(1, 15), 
+                      breaks = seq(1, 15, 2)) +
+
+   labs(x = "Time (minutes)" , 
+        y = bquote('Relative CEWL (g/'*m^2*'h)')) -> CEWLr_time
+  
+CEWLr_time
+```
+
+```{r}
+ggsave(filename = "CEWL_relative_time_dead.pdf",
+       plot = CEWLr_time,
+       path = "./Results_Figures",
+       device = "pdf",
+       dpi = 600,
+       units = "mm",
+       width = 150, height = 100)
+```
+
+
+
+
+## CEWL (raw) ~ cloacal temperature
+
+*manuscript*
+note, 3132 rows removed bc they do not have cloacal temp
+
+```{r CEWL cloacal temp}
+ggplot(CEWL_time_temp_subset) +
+   geom_point(aes(x = (calibrated_cloacal_temp_C), 
+       y = CEWL_g_m2h,
+       shape = treatment,
+       color = liz_tmt),
+       size = 2, 
+       alpha = 1) +
+  geom_smooth(aes(x = (calibrated_cloacal_temp_C), 
+       y = CEWL_g_m2h,
+       color = liz_tmt),
+       method = "lm", 
+        formula = y ~ poly(x, 2),
+               size = 1, 
+               se = F) +
+  scale_x_continuous(limits = c(11, 36.2),
+                     breaks = c(seq(15, 35, 5)),
+                     labels = c(seq(15, 35, 5))) +
+
+  # control group
+   annotate("text", x = 29.5, y = 29, label = "Control[Heat]", parse = T,
+           size = 3, family = "sans", color = control2) +
+  annotate("text", x = 28.7, y = 22, label = "Control[Cool]", parse = T,
+           size = 3, family = "sans", color = control1) +
+  
+  # annotations for cooling group
+   #annotate(geom = "point", x = 14.3, y = 5, 
+    #       size = 4, pch = 25, fill = cool) + 
+  annotate("text", x = 11.2, y = 2.5, label = "T[15]", parse = T,
+           size = 5, family = "sans", color = cool) +
+  
+   #annotate(geom = "point", x = 35.2, y = 11.8, 
+    #       size = 4, pch = 25, fill = cool) + 
+  annotate("text", x = 29, y = 8.5, label = "T[1]", parse = T,
+           size = 5, family = "sans", color = cool) +
+  
+  # annotations for heating group
+   #annotate(geom = "point", x = 15.9, y = 14, 
+    #       size = 4, pch = 24, fill = heat) +  
+   annotate("text", x = 20.5, y = 40, label = "T[1]", parse = T,
+           size = 5, family = "sans", color = heat) +
+  
+   #annotate(geom = "point", x = 38.3, y = 25.2, 
+    #       size = 4, pch = 24, fill = heat) +
+   annotate("text", x = 36.2, y = 65, label = "T[15]", parse = T,
+           size = 5, family = "sans", color = heat) +
+   
+   theme_classic() +
+   theme(text = element_text(color = "black", 
+                            family = "sans", 
+                            size = 12),
+        axis.text = element_text(color = "black", 
+                                 family = "sans", 
+                                 size = 8),
+        legend.text = element_text(color = "black", 
+                                 family = "sans", 
+                                 size = 12),
+        #legend.text.align = 0,
+        legend.position = "none",
+        #legend.position = c(0.9, 0.1),
+        plot.margin = margin(t = 6, r = 6, b = 6, l = 6, unit = "pt")) +
+  
+   scale_color_manual(values = c("A control" = control1,
+                                 "D control" = control2,
+                                     "A cooling" = cool,  
+                                     "D heating" = heat),
+                      name = "Treatment") +
+  scale_shape_manual(values = c(21,25,24),
+                     name = "Treatment") + 
+  
+   labs(x = "Internal Body Temperature (°C)" , 
+        y = bquote('CEWL (g/'*m^2*'h)'), 
+        se = FALSE) -> CEWL_ctemp
+CEWL_ctemp
+```
+
+```{r}
+ggsave(filename = "raw_CEWL_temp_dead.pdf",
+       plot = CEWL_ctemp,
+       path = "./Results_Figures",
+       device = "pdf",
+       dpi = 600,
+       units = "mm",
+       width = 150, height = 100)
+```
+
+
+## aggregate
+
+
+```{r}
+# arrange
+dead_arrange <- ggarrange(CEWLr_time, CEWL_ctemp,
+                          nrow = 2, ncol = 1,
+                          heights = c(1,1))
+dead_arrange
+
+# export
+ggsave(filename = "dead_lizards_time_and_temp_figs.pdf",
+       plot = dead_arrange,
+       path = "./Results_Figures",
+       device = "pdf",
+       dpi = 600,
+       units = "mm",
+       width = 150, height = 200)
+```
+

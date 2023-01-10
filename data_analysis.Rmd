@@ -1,0 +1,1167 @@
+---
+title: "Data Analysis: Acute Changes in CEWL as a Function of Temperature"
+author: "Calvin Davis, Savannah Weaver"
+date: "2022"
+output: 
+  rmdformats::html_clean:
+    highlight: tango
+    thumbnails: FALSE
+    toc: TRUE
+    toc_depth: 3
+---
+
+
+
+# Packages
+
+```{r setup, echo=T, results='hide', message=FALSE}
+if (!require("tidyverse")) install.packages("tidyverse") 
+library("tidyverse") #tidyr, ggplot, dplyr, etc
+if (!require("ggpubr")) install.packages("ggpubr") 
+library("ggpubr")
+if (!require("lme4")) install.packages("lme4") 
+library("lme4") # mixed-effect models
+if (!require("lmerTest")) install.packages("lmerTest") 
+library("lmerTest") # p-values
+if (!require("car")) install.packages("car") 
+library("car") # test for VIF
+if (!require("broom.mixed")) install.packages("broom.mixed")
+library("broom.mixed") # model export
+if (!require("emmeans")) install.packages('emmeans')
+library('emmeans')
+if (!require("RColorBrewer")) install.packages("RColorBrewer")
+library("RColorBrewer") # model export
+if (!require("rmdformats")) install.packages("rmdformats")
+library("rmdformats") # clean html R markdown format
+```
+
+
+
+# Background
+
+This code walks through the statistical models and figures for a study on the rate of change of cutaneous evaporative water loss (CEWL) in response to temperature change in Western Fence Lizards (*Sceloporus occidentalis*) (**published in the Journal __ in 2023**). Data was collected and analyzed by Calvin Davis and Savannah Weaver, under the advising of Dr. Emily Taylor at California Polytechnic State University. 
+
+
+# Load Data
+
+Get the RDS files created in the data wrangling Rmd:
+
+```{r}
+temp_time_series <- read_rds("Data/temp_time_series.RDS")
+CEWL_time_series <- read_rds("Data/CEWL_time_series.RDS")
+```
+
+
+
+
+# Stats & Models
+
+
+## Temp Correlation
+
+Check the correlation between dorsal and cloacal temps:
+
+```{r temp corr}
+temp_corr <- lm(data = temp_time_series, 
+                calibrated_dorsal_temp ~ calibrated_cloacal_temp)
+summary(temp_corr)
+
+#write.csv(broom.mixed::tidy(temp_corr), 
+ #         "./Results_Statistics/body_temp_correlation.csv")
+```
+
+They are actually pretty different, so run parallel models of CEWL, one with dorsal temp, and one with cloacal temp.
+
+## CEWL (raw) ~ temp LMM
+
+First, test linear effects of temperature:
+
+```{r CEWL LMM 2}
+CEWL_LMM_02a <- lme4::lmer(data = temp_time_series,
+                          CEWL_g_m2h ~ 
+                             calibrated_cloacal_temp *
+                             treatment +
+                             (1|date/lizard_ID))
+summary(CEWL_LMM_02a)
+vif(CEWL_LMM_02a)
+
+CEWL_LMM_02b <- lme4::lmer(data = temp_time_series,
+                          CEWL_g_m2h ~ 
+                             calibrated_dorsal_temp *
+                             treatment +
+                             (1|date/lizard_ID))
+summary(CEWL_LMM_02b)
+vif(CEWL_LMM_02b)
+```
+
+These are REALLY good models, but based on the figures below, the relationship isn't actually linear... so test the inclusion of polynomial factors:
+
+
+```{r CEWL LMM 3}
+CEWL_LMM_03a <- lme4::lmer(data = temp_time_series,
+                          CEWL_g_m2h ~ 
+                             poly(calibrated_cloacal_temp, 2)*treatment +
+                             (1|date/lizard_ID))
+summary(CEWL_LMM_03a)
+vif(CEWL_LMM_03a)
+anova(CEWL_LMM_03a, CEWL_LMM_02a)
+
+CEWL_LMM_03b <- lme4::lmer(data = temp_time_series,
+                          CEWL_g_m2h ~ 
+                             poly(calibrated_dorsal_temp, 2)*treatment +
+                             (1|date/lizard_ID))
+summary(CEWL_LMM_03b)
+vif(CEWL_LMM_03b)
+anova(CEWL_LMM_03b, CEWL_LMM_02b)
+```
+
+The poly models have significantly better explanatory power than the linear models.
+
+Also try log transformation to make sure a polynomial effect is best:
+
+```{r CEWL LMM 4}
+CEWL_LMM_04a <- lme4::lmer(data = temp_time_series,
+                          CEWL_g_m2h ~ 
+                             (log(calibrated_cloacal_temp))*treatment +
+                             (1|date/lizard_ID))
+summary(CEWL_LMM_04a)
+vif(CEWL_LMM_04a)
+anova(CEWL_LMM_04a, CEWL_LMM_02a)
+anova(CEWL_LMM_04a, CEWL_LMM_03a)
+
+CEWL_LMM_04b <- lme4::lmer(data = temp_time_series,
+                          CEWL_g_m2h ~ 
+                             log(calibrated_dorsal_temp)*treatment +
+                             treatment +
+                             (1|date/lizard_ID))
+summary(CEWL_LMM_04b)
+vif(CEWL_LMM_04b)
+anova(CEWL_LMM_04b, CEWL_LMM_02b)
+anova(CEWL_LMM_04b, CEWL_LMM_03b)
+```
+
+
+The logarithmic models are NOT better than the linear or polynomial ones.
+
+
+VIFs are still close to 1 with the polynomial included, and all variables seem significant, so re-run with p-values:
+
+```{r CEWL LMM best 1}
+CEWL_LMM_besta <- lmerTest::lmer(data = temp_time_series,
+                          CEWL_g_m2h ~ 
+                             poly(calibrated_cloacal_temp, 2) * treatment +
+                             (1|date/lizard_ID))
+summary(CEWL_LMM_besta)
+
+CEWL_LMM_bestb <- lmerTest::lmer(data = temp_time_series,
+                          CEWL_g_m2h ~ 
+                             poly(calibrated_dorsal_temp, 2) * treatment +
+                             (1|date/lizard_ID))
+summary(CEWL_LMM_bestb)
+```
+
+These are the best models for CEWL ~ temperature. 
+
+Check model assumptions:
+
+```{r model assump check}
+plot(CEWL_LMM_besta)
+plot(CEWL_LMM_bestb)
+```
+
+They both have a really weird spike, but otherwise there's no fanning or different pattern.
+
+
+```{r export best CEWL LMM}
+write.csv(broom.mixed::tidy(CEWL_LMM_besta), 
+          "./Results_Statistics/CEWL_best_model_clotemp.csv")
+write.csv(broom.mixed::tidy(CEWL_LMM_bestb), 
+          "./Results_Statistics/CEWL_best_model_dorstemp.csv")
+```
+
+
+
+
+
+
+
+
+## CEWL (raw) ~ time LMM
+
+NOTE: Start times vary from 97-170 seconds after starting time series.
+
+Make a polynomial model first:
+
+```{r CEWL time LMM 1}
+rates_LMM_01 <- lme4::lmer(data = CEWL_time_series,
+                          CEWL_g_m2h ~ 
+                             poly(time_min, 2) * treatment +
+                             (1|date/lizard_ID))
+summary(rates_LMM_01)
+vif(rates_LMM_01)
+drop1(rates_LMM_01)
+```
+
+Also make a linear model version:
+
+```{r CEWL time LMM 2}
+rates_LMM_02 <- lme4::lmer(data = CEWL_time_series,
+                          CEWL_g_m2h ~ 
+                             time_min * treatment +
+                             (1|date/lizard_ID))
+summary(rates_LMM_02)
+anova(rates_LMM_02, rates_LMM_01)
+```
+
+Polynomial is much better than linear. 
+
+Also compare to log version:
+
+```{r CEWL time LMM 3}
+rates_LMM_03 <- lme4::lmer(data = CEWL_time_series,
+                          CEWL_g_m2h ~ 
+                             log(time_min) * treatment +
+                             (1|date/lizard_ID))
+summary(rates_LMM_03)
+anova(rates_LMM_02, rates_LMM_03)
+anova(rates_LMM_01, rates_LMM_03)
+```
+
+The polynomial model is best (better than both log and lm options).
+
+re-run with p-values:
+
+```{r CEWL LMM best 2}
+rates_LMM_best <- lmerTest::lmer(data = CEWL_time_series,
+                          CEWL_g_m2h ~ 
+                             poly(time_min, 2) * treatment +
+                             (1|date/lizard_ID))
+summary(rates_LMM_best)
+```
+
+```{r}
+write.csv(broom.mixed::tidy(rates_LMM_best), 
+          "./Results_Statistics/CEWL_best_model_time.csv")
+```
+
+
+
+
+## Body Temperature ~ Time
+
+linear models:
+
+```{r temp time LMM 1}
+body_temp_LMM_01a <- lme4::lmer(data = temp_time_series,
+                          calibrated_cloacal_temp ~ 
+                             time_min * treatment +
+                             (1|date/lizard_ID))
+summary(body_temp_LMM_01a)
+vif(body_temp_LMM_01a)
+
+body_temp_LMM_01b <- lme4::lmer(data = temp_time_series,
+                          calibrated_dorsal_temp ~ 
+                             time_min * treatment +
+                             (1|date/lizard_ID))
+summary(body_temp_LMM_01b)
+vif(body_temp_LMM_01b)
+```
+
+polynomial models:
+
+```{r temp time LMM 2}
+body_temp_LMM_02a <- lme4::lmer(data = temp_time_series,
+                          calibrated_cloacal_temp ~ 
+                             poly(time_min, 2) * treatment +
+                             (1|date/lizard_ID))
+summary(body_temp_LMM_02a)
+car::vif(body_temp_LMM_02a)
+anova(body_temp_LMM_02a, body_temp_LMM_01a)
+
+body_temp_LMM_02b <- lme4::lmer(data = temp_time_series,
+                          calibrated_dorsal_temp ~ 
+                             poly(time_min, 2) * treatment +
+                             (1|date/lizard_ID))
+summary(body_temp_LMM_02b)
+car::vif(body_temp_LMM_02b)
+anova(body_temp_LMM_02b, body_temp_LMM_01b)
+```
+
+
+
+Again, the polynomial models are MUCH better.
+
+```{r temp time best}
+body_temp_LMM_besta <- lmerTest::lmer(data = temp_time_series,
+                          calibrated_cloacal_temp ~ 
+                             poly(time_min, 2) * treatment +
+                             (1|date/lizard_ID))
+summary(body_temp_LMM_besta)
+write.csv(broom.mixed::tidy(body_temp_LMM_besta), 
+          "./Results_Statistics/temp_time_best_model_clotemp.csv")
+
+body_temp_LMM_bestb <- lmerTest::lmer(data = temp_time_series,
+                          calibrated_dorsal_temp ~ 
+                             poly(time_min, 2) * treatment +
+                             (1|date/lizard_ID))
+summary(body_temp_LMM_bestb)
+write.csv(broom.mixed::tidy(body_temp_LMM_bestb), 
+          "./Results_Statistics/temp_time_best_model_dorstemp.csv")
+```
+
+
+
+
+## Rate of Change
+
+We want to know why each lizard had a different rate of change of CEWL during the 15-minute temperature treatment and measurement period.
+
+First, calculate rate of change for each lizard:
+
+```{r CEWL rate of change LM}
+change_LM <- lm(data = CEWL_time_series,
+                          CEWL_g_m2h ~ 
+                             time_min*lizard_ID)
+summary(change_LM)
+
+# now get the trend/slope for each individual and make into a variable in df
+lizard_coeffs <- data.frame(emtrends(change_LM, "lizard_ID", var = "time_min")) %>%
+   left_join(read_rds("Data/collection_dat_formatted.RDS"), 
+             by = c("lizard_ID" = "individual_ID")) %>%
+   dplyr::select(lizard_ID, rate_change = time_min.trend, 
+                 SE, df, lower.CL, upper.CL,
+                 date,
+                 treatment,
+                 mass_g, SVL_mm,
+                 chamber_time_elapsed_hr
+                 ) %>%
+   dplyr::mutate(date_factor = as.factor(date))
+summary(lizard_coeffs)
+length(unique(CEWL_time_series$lizard_ID))
+```
+
+
+
+NOW we can look at how the RATE of CEWL change (CEWL change per MINUTE) is different among lizards.
+
+```{r CEWL rate of change LMM 1}
+change_LMM_1 <- lme4::lmer(data = lizard_coeffs,
+                          rate_change ~ # remember estimate is CEWL PER MINUTE
+                             treatment + 
+                       mass_g + SVL_mm + 
+                       chamber_time_elapsed_hr + 
+                  # include date as random effect bc sig diff weather
+                       (1|date_factor))
+summary(change_LMM_1)
+car::vif(change_LMM_1)
+drop1(change_LMM_1)
+anova(change_LMM_1)
+```
+
+Don't need to worry about VIF.
+
+drop mass first based on low SS and resulting AIC:
+
+```{r CEWL rate of change LMM 2}
+change_LMM_2 <- lme4::lmer(data = lizard_coeffs,
+                          rate_change ~ # remember estimate is CEWL PER MINUTE
+                             treatment + 
+                       SVL_mm + 
+                       chamber_time_elapsed_hr + 
+                  # include date as random effect bc sig diff weather
+                       (1|date_factor))
+summary(change_LMM_2)
+drop1(change_LMM_2)
+anova(change_LMM_2)
+```
+
+
+
+drop SVL:
+
+```{r CEWL rate of change LMM 3}
+change_LMM_3 <- lme4::lmer(data = lizard_coeffs,
+                          rate_change ~ # remember estimate is CEWL PER MINUTE
+                             treatment + 
+                             chamber_time_elapsed_hr + 
+                  # include date as random effect bc sig diff weather
+                       (1|date_factor))
+summary(change_LMM_3)
+drop1(change_LMM_3)
+anova(change_LMM_3)
+```
+
+
+drop chamber_time_elapsed_hr:
+
+```{r CEWL rate of change LMM 4}
+change_LMM_4 <- lme4::lmer(data = lizard_coeffs,
+                          rate_change ~ 
+                             treatment + 
+                       (1|date_factor))
+summary(change_LMM_4)
+drop1(change_LMM_4)
+anova(change_LMM_4)
+```
+
+The simplest model is our best/final model.
+
+Save with p-values:
+
+```{r best rate of change model}
+change_LMM_best <- lmerTest::lmer(data = lizard_coeffs,
+                          rate_change ~ # remember estimate is CEWL PER MINUTE
+                             treatment + 
+                       (1|date_factor))
+summary(change_LMM_best)
+write.csv(broom.mixed::tidy(change_LMM_best), 
+          "./Results_Statistics/change_CEWL_best_model.csv")
+```
+
+also get pairwise differences for change ~ tmt, which I will use to make the boxplot later:
+
+```{r tmt pairwise change}
+emmeans <- data.frame(emmeans(change_LMM_best, "treatment"))
+emmeans
+emmean_ps <- data.frame(pairs(emmeans(change_LMM_best, "treatment"))) # p values
+emmean_ps
+```
+
+
+
+
+
+# Figures
+
+## COLOR
+
+```{r}
+cool  <- c(brewer.pal(11, "RdYlBu")[c(10)])
+heat  <- c(brewer.pal(11, "RdYlBu")[c(1)])
+control  <- c(brewer.pal(11, "RdGy")[c(8)])
+controlbox  <- c(brewer.pal(11, "RdGy")[c(9)])
+cntrls <- c(brewer.pal(9, "Greys")[c(3,6,9,4,7,3,5,8,4,6,9)])
+```
+
+
+Lots of these are just here so we have access to them if we want, not because they are necessarily going to be included in the final manuscript.
+
+relevel factors for figures only
+
+```{r}
+CEWL_time_series$treatment <- factor(CEWL_time_series$treatment,
+                                     levels = c("Heating", "Cooling", "Control"))
+temp_time_series$treatment <- factor(temp_time_series$treatment,
+                                     levels = c("Heating", "Cooling", "Control"))
+```
+
+
+## cloacal temp ~ time
+
+```{r c temp time}
+ggplot(temp_time_series) +
+   aes(x = time_sec, 
+       y = calibrated_cloacal_temp,
+       color = treatment) +
+   geom_point(size = 0.01, 
+              alpha = 0.2) +
+   geom_smooth(method = "loess", 
+               se = F, 
+               size = 2,
+               na.rm = TRUE) +
+   theme_classic() +
+   scale_color_manual(values = c("Control" = control,
+                                     "Cooling" = cool,  
+                                     "Heating" = heat)) +
+   labs(x = "Time (seconds)" , 
+        y = "Internal Body Temperature (°C)", 
+        color = "Treatment", se = FALSE) -> ctemp_time
+ctemp_time
+```
+
+
+## dorsal temp ~ time
+
+```{r d temp time}
+ggplot(temp_time_series) +
+   aes(x = time_sec, 
+       y = (calibrated_dorsal_temp),
+       color = treatment) +
+   geom_point(size = 0.01, 
+              alpha = 0.2) +
+   geom_smooth(method = "loess", 
+               se = F, 
+               size = 2,
+               na.rm = TRUE) +
+   theme_classic() +
+   scale_color_manual(values = c("Control" = control,
+                                     "Cooling" = cool,  
+                                     "Heating" = heat)) +
+   labs(x= "Time (seconds)" , 
+        y= "Surface Body Temperature (°C)", 
+        color ="Treatment") -> dtemp_time
+dtemp_time
+```
+
+
+## CEWL (raw) ~ time
+
+```{r CEWL time}
+ggplot(CEWL_time_series) +
+   aes(x= time_sec, 
+       y = CEWL_g_m2h,
+       color = treatment) +
+   geom_point(size = 0.01, 
+              alpha = 0.25) +
+   geom_smooth(method = "loess", 
+               size = 2.5, 
+               se = F) +
+   theme_classic() +
+   theme(text = element_text(size = 15)) + 
+   theme(axis.text.x = element_text(size = 10)) +
+   scale_color_manual(values = c("Control" = control,
+                                     "Cooling" = cool,  
+                                     "Heating" = heat)) +
+   labs(x = "Time (seconds)" , 
+        y = bquote('CEWL (g/'*m^2*'h)'), 
+        color = "Treatment", 
+        se = FALSE) +
+   scale_x_continuous(limits = c(0, 925), 
+                      breaks=seq(0, 950, 100)) -> CEWL_time
+CEWL_time
+```
+
+
+
+*we may want to use a nonlinear model*
+
+
+
+## legend
+
+```{r make a fancy legend}
+ggplot(predict_vals_df) +
+   
+   geom_smooth(aes(x = (calibrated_cloacal_temp), 
+       y = CEWL_g_m2h,
+       color = treatment),
+       method = "lm", 
+        formula = y ~ poly(x, 2),
+               size = 1, 
+               se = F) +
+  geom_point(aes(x = (calibrated_cloacal_temp), 
+       y = CEWL_g_m2h,
+       #color = treatment,
+       fill = treatment,
+       shape = treatment),
+       size = 4, 
+       alpha = 1) +
+  
+  scale_x_continuous(limits = c(14, 39),
+                     breaks = c(seq(15, 35, 5)),
+                     labels = c(seq(15, 35, 5))) +
+  theme_classic() +
+   theme(text = element_text(color = "black", 
+                            family = "sans", 
+                            size = 12),
+        axis.text = element_text(color = "black", 
+                                 family = "sans", 
+                                 size = 8),
+        legend.text = element_text(color = "black", 
+                                 family = "sans", 
+                                 size = 12),
+        legend.position = c(0.5,0.5)) +
+  scale_shape_manual(values = c(21,25,24),
+                     name = "Treatment") + 
+   scale_fill_manual(values = c("Control" = control,
+                                   "Cooling" = cool,  
+                                     "Heating" = heat),
+                      name = "Treatment") +
+  scale_color_manual(values = c("Control" = control,
+                                   "Cooling" = cool,  
+                                     "Heating" = heat),
+                      name = "Treatment")  -> fancy_legend
+  
+fancy_legend
+  
+# MUST CHANGE COMMENTS ABOVE to produce this
+LEGEND <- as_ggplot(get_legend(fancy_legend))
+
+#ggsave(filename = "legend_only.pdf",
+ #      plot = LEGEND,
+  #     path = "./Results_Figures",
+   #    device = "pdf",
+    #   dpi = 600,
+     #  units = "mm",
+      # width = 30, height = 30)
+```
+
+
+
+## CEWL (raw) ~ cloacal temperature
+
+*manuscript*
+
+```{r CEWL cloacal temp}
+predict_vals_df %>%
+  dplyr::filter(complete.cases(calibrated_cloacal_temp, CEWL_g_m2h)) %>%
+  group_by(lizard_ID) %>%
+  summarise(max(CEWL_g_m2h)) %>%
+  nrow()
+
+ggplot(predict_vals_df) +
+   geom_point(aes(x = (calibrated_cloacal_temp), 
+       y = CEWL_g_m2h,
+       shape = treatment,
+       color = treatment),
+       size = 0.01, 
+               alpha = 0.05) +
+   geom_point(aes(x = (calibrated_cloacal_temp), 
+       y = mod_predicts,
+       shape = treatment,
+       color = treatment),
+       size = 0.01, 
+               alpha = 0.1) +
+   geom_smooth(aes(x = (calibrated_cloacal_temp), 
+       y = CEWL_g_m2h,
+       color = treatment),
+       method = "lm", 
+        formula = y ~ poly(x, 2),
+               size = 2, 
+               se = F) +
+  
+   #ylim(0,32) +
+  scale_x_continuous(limits = c(12.5, 40),
+                     breaks = c(seq(15, 35, 5)),
+                     labels = c(seq(15, 35, 5))) +
+
+  # control group
+   #annotate(geom = "point", x = 25.4, y = 9.6, 
+    #       size = 5, pch = 21, fill = control) + 
+   #annotate(geom = "point", x = 30.14, y = 21.4, 
+    #       size = 5, pch = 21, fill = control) + 
+  
+  # annotations for cooling group
+   annotate(geom = "point", x = 14.3, y = 5, 
+           size = 4, pch = 25, fill = cool) + 
+  annotate("text", x = 12.8, y = 5, label = "T[15]", parse = T,
+           size = 5, family = "sans", color = cool) +
+  
+   annotate(geom = "point", x = 35.2, y = 11.8, 
+           size = 4, pch = 25, fill = cool) + 
+  annotate("text", x = 36.4, y = 11.8, label = "T[1]", parse = T,
+           size = 5, family = "sans", color = cool) +
+  
+  # annotations for heating group
+   annotate(geom = "point", x = 15.9, y = 14, 
+           size = 4, pch = 24, fill = heat) +  
+  annotate("text", x = 14.7, y = 14, label = "T[1]", parse = T,
+           size = 5, family = "sans", color = heat) +
+  
+   annotate(geom = "point", x = 38.3, y = 25.2, 
+           size = 4, pch = 24, fill = heat) +
+   annotate("text", x = 39.8, y = 25.2, label = "T[15]", parse = T,
+           size = 5, family = "sans", color = heat) +
+   
+   theme_classic() +
+   theme(text = element_text(color = "black", 
+                            family = "sans", 
+                            size = 12),
+        axis.text = element_text(color = "black", 
+                                 family = "sans", 
+                                 size = 8),
+        legend.text = element_text(color = "black", 
+                                 family = "sans", 
+                                 size = 12),
+        #legend.text.align = 0,
+        legend.position = "none",
+        #legend.position = c(0.9, 0.1),
+        plot.margin = margin(t = 6, r = 6, b = 6, l = 6, unit = "pt")) +
+  
+   scale_color_manual(values = c("Control" = control,
+                                   "Cooling" = cool,  
+                                     "Heating" = heat),
+                      name = "Treatment") +
+  scale_shape_manual(values = c(21,25,24),
+                     name = "Treatment") + 
+  
+   labs(x = "Internal Body Temperature (°C)" , 
+        y = bquote('CEWL (g/'*m^2*'h)'), 
+        se = FALSE) -> CEWL_ctemp
+CEWL_ctemp
+```
+
+
+## CEWL Control
+
+```{r CEWL ~ CONTRL temp by individual}
+temp_time_series %>%
+  dplyr::filter(treatment == "Control") %>%
+  dplyr::filter(complete.cases(calibrated_cloacal_temp, CEWL_g_m2h)) %>%
+  group_by(lizard_ID) %>%
+  summarise(max(CEWL_g_m2h)) %>%
+  nrow()
+
+temp_time_series %>%
+  dplyr::filter(treatment == "Control") %>%
+  ggplot() +
+   aes(x = calibrated_cloacal_temp, 
+       y = CEWL_g_m2h,
+       color = lizard_ID) +
+  
+   geom_point(size = 0.1, 
+               alpha = 0.1) +
+   geom_smooth(method = "lm", 
+               size = 1, 
+               se = F) +
+
+   ylim(0,32) +
+   xlim(25,31) +
+  
+   theme_classic() +
+   theme(text = element_text(color = "black", 
+                            family = "sans", 
+                            size = 10),
+        axis.text = element_text(color = "black", 
+                                 family = "sans", 
+                                 size = 6),
+        legend.text = element_text(color = "black", 
+                                 family = "sans", 
+                                 size = 10),
+        legend.text.align = 0,
+        legend.position = "none") +
+  
+  #scale_color_brewer(palette = "Greys") +
+  
+   scale_color_manual(values = cntrls) +
+  
+   labs(x = "Internal Body Temperature (°C)" , 
+        y = bquote('CEWL (g/'*m^2*'h)'), 
+        color = "Treatment", 
+        se = FALSE) -> CEWL_control
+CEWL_control
+```
+
+
+
+## CEWL (raw) ~ dorsal temperature
+
+```{r CEWL dorsal temp}
+ggplot(temp_time_series) +
+   aes(x = calibrated_dorsal_temp, 
+       y = CEWL_g_m2h,
+       color = treatment) +
+   geom_point(size = 0.01, 
+              alpha = 0.2) +
+   geom_smooth(method = "loess", 
+               size = 2, 
+               se = F) +
+   theme_classic() +
+   theme(text = element_text(size = 15)) + 
+   theme(axis.text.x = element_text(size = 10)) +
+   scale_color_manual(values = c("Control" = control,
+                                     "Cooling" = cool,  
+                                     "Heating" = heat)) +
+   labs(x = "Surface Body Temperature (°C)" , 
+        y = bquote('CEWL (g/'*m^2*'h)'), 
+        color = "Treatment", 
+        se = FALSE) -> CEWL_dtemp
+CEWL_dtemp
+```
+
+
+
+
+## CEWL (relative) ~ time
+
+*manuscript*
+
+```{r relative CEWL time}
+# n lizards
+CEWL_time_series %>%
+  dplyr::filter(complete.cases(time_min, relative_CEWL)) %>%
+  group_by(lizard_ID) %>%
+  summarise(max(relative_CEWL)) %>%
+  nrow()
+
+# plot
+ggplot() +
+   
+   geom_point(data = CEWL_time_series,
+              aes(x= time_min, 
+                  y = relative_CEWL,
+                  shape = treatment,
+                  color = treatment),
+              size = 0.01, 
+              alpha = 0.1) +
+  
+   geom_hline(yintercept = 0, size = 0.5,
+              linetype = "dashed", color = "black") +
+   
+   geom_smooth(data = CEWL_time_series,
+               aes(x = time_min, 
+                   y = relative_CEWL,
+                   color = treatment),
+               method = "lm", 
+               formula = y ~ poly((x), 2),
+               size = 1, 
+               se = F) +
+   
+   theme_classic() +
+   theme(text = element_text(color = "black", 
+                            family = "sans", 
+                            size = 12),
+        axis.text = element_text(color = "black", 
+                                 family = "sans", 
+                                 size = 8),
+        legend.text = element_text(color = "black", 
+                                 family = "sans", 
+                                 size = 12),
+        legend.position = "none") +
+  
+  scale_shape_manual(values = c(21,25,24),
+                     name = "Treatment") + 
+   scale_color_manual(values = c("Control" = control,
+                                     "Cooling" = cool,  
+                                     "Heating" = heat),
+                      name = "Treatment") +
+  
+  annotate(geom = "point", x = 15, y = -3.9, 
+           size = 5, pch = 21, fill = control) +
+   annotate(geom = "point", x = 15, y = -7.5, 
+           size = 4, pch = 25, fill = cool) + 
+   annotate(geom = "point", x = 15, y = 3, 
+           size = 4, pch = 24, fill = heat) +
+  scale_x_continuous(limits = c(1, 15), 
+                      breaks = seq(1, 15, 2)) +
+
+   labs(x = "Time (minutes)" , 
+        y = bquote('Relative CEWL (g/'*m^2*'h)')) -> CEWLr_time
+  
+CEWLr_time
+```
+
+
+
+## CEWL (relative) ~ cloacal temperature
+
+```{r r CEWL cloacal temp}
+ggplot(temp_time_series) +
+   aes(x = calibrated_cloacal_temp, 
+       y = relative_CEWL,
+       color = treatment) +
+  
+   geom_point(size = 0.01, 
+              alpha = 0.2) +
+   geom_smooth(method = "loess", 
+               size = 2, 
+               se = F) +
+  
+   theme_classic() +
+   theme(text = element_text(color = "black", 
+                            family = "sans", 
+                            size = 22),
+        axis.text = element_text(color = "black", 
+                                 family = "sans", 
+                                 size = 16),
+        legend.text = element_text(color = "black", 
+                                 family = "sans", 
+                                 size = 22),
+        legend.text.align = 0,
+        legend.position = "right") + 
+  
+   scale_color_manual(values = c("Control" = control,
+                                     "Cooling" = cool,  
+                                     "Heating" = heat)) +
+  
+   labs(x = "Internal Body Temperature (°C)" , 
+        y = bquote('Relative CEWL (g/'*m^2*'h)'), 
+        color = "Treatment", 
+        se = FALSE) -> CEWLr_ctemp
+CEWLr_ctemp
+```
+
+
+
+## CEWL (relative) ~ dorsal temperature
+
+```{r r CEWL dorsal temp}
+ggplot(temp_time_series) +
+   aes(x = calibrated_dorsal_temp, 
+       y = relative_CEWL,
+       color = treatment) +
+   geom_point(size = 0.01, 
+              alpha = 0.2) +
+   geom_smooth(method = "loess", 
+               size = 2, 
+               se = F) +
+   theme_classic() +
+   theme(text = element_text(size = 15,
+                             family = "sans")) + 
+   theme(axis.text.x = element_text(size = 10)) +
+   scale_color_manual(values = c("Control" = control,
+                                     "Cooling" = cool,  
+                                     "Heating" = heat)) +
+   labs(x = "Surface Body Temperature (°C)" , 
+        y = bquote('Relative CEWL (g/'*m^2*'h)'), 
+        color = "Treatment", 
+        se = FALSE) -> CEWLr_dtemp
+CEWLr_dtemp
+```
+
+
+
+## CEWL Compare
+
+```{r fig arrange}
+ggarrange(CEWL_time, CEWLr_time,
+          CEWL_ctemp, CEWLr_ctemp,
+          CEWL_dtemp, CEWLr_dtemp,
+          ncol = 2, nrow = 3,
+          legend = "none"
+          ) -> CEWL_multi_fig
+CEWL_multi_fig
+# export figure
+#ggsave(filename = "CEWL_multi_fig.jpeg",
+ #      plot = CEWL_multi_fig,
+  #     path = "./Results_Figures",
+   #    device = "jpeg",
+    #   dpi = 1200,
+     #  width = 12, height = 13)
+```
+
+
+
+## CEWL Rate of Change
+
+```{r rate of change fig}
+nrow(lizard_coeffs)
+
+ggplot() +
+  geom_jitter(data = lizard_coeffs,
+              aes(x = treatment,
+                   y = rate_change,
+                   shape = treatment,
+                   color = treatment,
+                   fill = treatment),
+                   size = 0.7,
+               alpha = 0.3,
+              position = position_jitter(height = 0, width = 0.2)) +
+  geom_errorbar(data = emmeans,
+                aes(x = treatment,
+                    y = emmean, 
+                    color = treatment,
+                    group = treatment,
+                    ymin = lower.CL, 
+                    ymax = upper.CL),
+                width = .1,
+                alpha = 0.9) +
+  geom_point(data = emmeans, 
+             aes(x = treatment,
+                   y = emmean, 
+                   #color = treatment,
+                 shape = treatment,
+                 fill = treatment), 
+             color = "black",
+               size = 4) +
+   theme_classic() +
+   theme(text = element_text(color = "black", 
+                            family = "sans", 
+                            size = 12),
+        axis.text = element_text(color = "black", 
+                                 family = "sans", 
+                                 size = 8),
+        legend.text = element_text(color = "black", 
+                                 family = "sans", 
+                                 size = 12),
+        legend.position = "none") +
+  
+   scale_color_manual(values = c("Control" = controlbox,
+                                     "Cooling" = cool,  
+                                     "Heating" = heat)) +
+  scale_fill_manual(values = c("Control" = controlbox,
+                                     "Cooling" = cool,  
+                                     "Heating" = heat)) +
+  
+  scale_shape_manual(values = c(21,25,24),
+                     name = "Treatment") + 
+  
+   geom_hline(yintercept = 0, size = 0.5,
+              linetype = "dashed", color = "black") +
+  
+   annotate("text", x = 1, y = 0.42, label = "A", size = 3) +
+   annotate("text", x = 2, y = 0.3, label = "A", size = 3) +
+   annotate("text", x = 3, y = 0.9, label = "B", size = 3) +
+  
+   labs(x = "" , 
+        y = expression(Delta ~ 'CEWL '*min^-1*''),
+        color = "Treatment") -> rate_change_CEWL_fig
+rate_change_CEWL_fig
+```
+
+
+## Experimental Design Skematic
+
+```{r get exp design number code}
+exp_design <- read.csv("./Data/exp design.csv", 
+                            header = TRUE,
+                            fileEncoding="UTF-8-BOM")
+```
+
+```{r make exp design figure}
+ggplot(exp_design) +
+   aes(x = time_min, 
+       y = temp_C,
+       color = treatment) +
+     geom_line(size = 1) +
+   geom_vline(xintercept = 60,
+              alpha = 0.5,
+              size = 0.5,
+              linetype = "dashed", color = "black") +
+   geom_text(aes(30, 37, family = "sans"), label = "a", color = "black", size = 3) +
+   geom_vline(xintercept = 65,
+              alpha = 0.5,
+              size = 0.5,
+              linetype = "dashed", color = "black") +
+   geom_text(aes(62.5, 37, family = "sans"), label = "b", color = "black", size = 3) +
+   geom_vline(xintercept = 80,
+              alpha = 0.5,
+              size = 0.5,
+              linetype = "dashed", color = "black") +
+   geom_text(aes(72.5, 37, family = "sans"), label = "c", color = "black", size = 3) +
+   theme_classic() +
+   theme(text = element_text(color = "black", 
+                            family = "sans", 
+                            size = 12),
+        axis.text = element_text(color = "black", 
+                                 family = "sans", 
+                                 size = 8),
+        legend.text = element_text(color = "black", 
+                                 family = "sans", 
+                                 size = 12),
+        legend.position = "none",
+        axis.text.x = element_blank(),
+        #axis.line.x = element_blank(),
+        axis.ticks.x = element_blank()) +
+
+   scale_color_manual(values = c("Control" = control,
+                                     "Cooling" = cool,  
+                                     "Heating" = heat)) +
+   labs(x = "Time" , 
+        y = "Body Temperature (°C)", 
+        color = "Treatment") +
+   
+    annotate(geom = "point", x = 80, y = 25, 
+           size = 3, pch = 21, fill = controlbox) +
+   annotate(geom = "point", x = 80, y = 20, 
+           size = 3, pch = 25, fill = cool) + 
+   annotate(geom = "point", x = 80, y = 30, 
+           size = 3, pch = 24, fill = heat) +
+   
+   scale_y_continuous(limits = c(14, 37), 
+                      breaks=seq(15, 35, 5)) -> methods_schmatic_fig
+methods_schmatic_fig
+
+```
+ 
+
+# Save Grouped Figures
+
+### Methods Schematic
+```{r}
+ggsave(filename = "methods_schematic.pdf",
+       plot = methods_schmatic_fig,
+       path = "./Results_Figures",
+       device = "pdf",
+       dpi = 600,
+       units = "mm",
+       width = 80, height = 60)
+```
+
+### Relative CEWL ~ Time
+```{r}
+# standalone
+ggsave(filename = "CEWL_relative_time.pdf",
+       plot = CEWLr_time,
+       path = "./Results_Figures",
+       device = "pdf",
+       dpi = 600,
+       units = "mm",
+       width = 150, height = 100)
+
+
+# grouped figure
+test_relative <- ggarrange(CEWLr_time, 
+          ggarrange(LEGEND, rate_change_CEWL_fig,
+                    nrow = 1, ncol = 2,
+                    widths = c(1,2),
+                    align = "hv"
+                    ),
+          nrow = 2, ncol = 1,
+          heights = c(2,1))
+test_relative
+
+#ggsave(filename = "Fig1_condensed.pdf",
+ #      plot = test_relative,
+  #     path = "./Results_Figures",
+   #    device = "pdf",
+    #   dpi = 600,
+     #  units = "mm",
+      # width = 150, height = 150) # full width = 180
+```
+
+### Raw CEWL ~ Cloacal temp
+```{r}
+# standalone
+ggsave(filename = "CEWL_int_body_temp.pdf",
+       plot = CEWL_ctemp,
+       path = "./Results_Figures",
+       device = "pdf",
+       dpi = 600,
+       units = "mm",
+       width = 150, height = 100)
+
+# grouped figure
+CEWL_by_temp_arrange <- ggarrange(CEWL_ctemp, 
+                  ggarrange(LEGEND, CEWL_control,
+                            nrow = 1, ncol = 2,
+                            widths = c(1,2),
+                            align = "hv"
+                            ),
+                  nrow = 2, ncol = 1,
+                  heights = c(2,1))
+CEWL_by_temp_arrange
+
+
+#ggsave(filename = "Fig2_condensed.pdf",
+ #      plot = CEWL_by_temp_arrange,
+  #     path = "./Results_Figures",
+   #    device = "pdf",
+    #   dpi = 600,
+     #  units = "mm",
+      # width = 150, height = 150)
+```
+
+### Rate of Change
+```{r}
+ggsave(filename = "CEWL_change_min.pdf",
+       plot = rate_change_CEWL_fig,
+       path = "./Results_Figures",
+       device = "pdf",
+       dpi = 600,
+       units = "mm",
+       width = 80, height = 60)
+```
+
+### Control Individuals
+```{r}
+ggsave(filename = "CEWL_temp_control_lm.pdf",
+       plot = CEWL_control,
+       path = "./Results_Figures",
+       device = "pdf",
+       dpi = 600,
+       units = "mm",
+       width = 80, height = 60)
+```
+
+

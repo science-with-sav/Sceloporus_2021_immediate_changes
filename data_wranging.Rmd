@@ -1,0 +1,1243 @@
+---
+title: "Data Wrangling: Acute Changes in CEWL as a Function of Temperature"
+author: "Calvin Davis, Savannah Weaver"
+date: "2022"
+output: 
+  rmdformats::html_clean:
+    highlight: tango
+    thumbnails: FALSE
+    toc: TRUE
+    toc_depth: 3
+---
+
+
+
+# Packages
+
+```{r setup, echo=T, results='hide', message=FALSE}
+`%nin%` = Negate(`%in%`)
+if (!require("tidyverse")) install.packages("tidyverse") 
+library("tidyverse") #tidyr, ggplot, dplyr, etc
+if (!require("RColorBrewer")) install.packages("RColorBrewer")
+library("RColorBrewer") # plot colors
+if (!require("rmdformats")) install.packages("rmdformats")
+library("rmdformats") # clean html R markdown format
+```
+
+
+
+# Background
+
+This code walks through the data wrangling for the analysis of a study on the rate of change of cutaneous evaporative water loss (CEWL) in response to temperature change in Western Fence Lizards (*Sceloporus occidentalis*) (**published in the Journal __ in 2023**). Data was collected and analyzed by Calvin Davis and Savannah Weaver, under the advising of Dr. Emily Taylor at California Polytechnic State University. 
+
+
+# Load Data
+
+
+## Collection Data
+
+Variables: 
+
+- date = date of capture 
+- time_capture = time lizards were captured 
+- individual ID for each lizard
+- dorsal couple = label of which dorsal surface thermocouple was used 
+- cloacal couple = label of which thermocouple was inserted into cloaca 
+- dorsal/cloacal lead port = which port thermocouples were plugged into the thermologger 
+- time in chamber = time lizards were placed in incubation chambers 
+- time out chamber = time lizards were removed from incubation chamber 
+- chamber time elapsed min = amount of time lizards spent in incubation chamber in minutes 
+- chamber time elapsed hr = amount of time lizards spent in incubation chamber in hours
+
+Load in data, format, and calculate additional metrics.
+
+```{r load lizard collection data}
+collection_data <- read.csv("./Data/Collection Data.csv", 
+                            header = TRUE,
+                            fileEncoding="UTF-8-BOM") %>%  #removes junk characters for first column name
+   mutate(date_time_capture = (as.POSIXct(paste(date, time_capture), 
+                                           format = "%d/%m/%Y %H:%M")),
+          rounded_date_time = round.POSIXt(date_time_capture, units = "hours"),
+          date = as.Date(date, format = "%d/%m/%Y"),
+          time_capture = as.POSIXct(time_capture, format = "%H:%M"),
+          individual_ID = as.factor(individual_ID),
+          treatment = as.factor(treatment),
+          dorsal_couple = as.factor(dorsal_couple),
+          dorsal_lead_port = as.factor(dorsal_lead_port),
+          cloacal_couple = as.factor(cloacal_couple),
+          cloacal_lead_port = as.factor(cloacal_lead_port),
+          time_in_chamber = as.POSIXct(time_in_chamber, 
+                                       format = "%H:%M"),
+          hold_time_hr = (as.numeric(time_in_chamber - time_capture))/60,
+          time_out_chamber = as.POSIXct(time_out_chamber, 
+                                        format = "%H:%M"),
+          chamber_time_elapsed_min = as.numeric(time_out_chamber - time_in_chamber),
+          chamber_time_elapsed_hr = chamber_time_elapsed_min/60,
+          # add estimated "chamber time" for control lizards
+          chamber_time_elapsed_hr = (case_when(treatment == 'Control' ~ 1,
+                                              treatment != 'Control' ~ chamber_time_elapsed_hr)) # used as.factor to check that elapsed time = 1hr for 8336 obs of control lizards
+          )
+summary(collection_data)
+```
+
+
+### Collection Stats for Permitting
+
+```{r permit stats}
+permit_stats <- collection_data %>%
+   group_by(date) %>%
+   summarise(n = n())
+permit_stats
+```
+
+
+### Mean Values by Tmt
+
+```{r diffs by tmt}
+means <- collection_data %>%
+  group_by(treatment) %>%
+  summarise(mean(mass_g),
+            sd(mass_g),
+            mean(SVL_mm),
+            sd(SVL_mm),
+            mean(chamber_time_elapsed_min))
+means
+
+aov_mass <- aov(data = collection_data, mass_g ~ treatment)
+summary(aov_mass)
+TukeyHSD(aov_mass)
+```
+
+
+
+## CEWL Data
+
+First, need to get the start times for each AquaFlux run:
+
+```{r CEWL data}
+# load data
+AF_starts_wide <- read.csv("./Data/AquaFlux start times.csv",
+                           fileEncoding="UTF-8-BOM")
+# reorganize
+rownames(AF_starts_wide) <- AF_starts_wide$Probe
+AF_starts_wide$Probe <- NULL
+AF_starts_tidy <- as.data.frame(t(as.matrix(AF_starts_wide))) %>%
+   mutate(lizard_ID = as.factor(Comments),
+          date_time_start = as.POSIXct(paste(date,time_start), 
+                                       format = "%m/%d/%y %I:%M:%S %p"),
+          date = as.Date(date, format = "%m/%d/%y")
+          ) %>%
+   dplyr::select(lizard_ID, date, date_time_start)
+summary(AF_starts_tidy)
+```
+
+
+
+Get filenames:
+
+```{r CEWL filenames}
+# make a list of file names of all data to load in
+filenames_aquaflux <- list.files(path = "./Data/AquaFlux data", 
+                                 pattern = ".csv")
+```
+
+Make a function that will read in the data from each csv, name and organize the data correctly. 
+
+Variables that will be read-in related to CEWL: 
+
+- time sec = time recording from Evaporimeter 
+- CEWL_g_m2h = cutaneous evaporative water loss 
+- msmt_temp_C = ambient temperature in Celsius 
+- msmt_RH_percent = % relative ambient humidity 
+
+```{r function to load CEWL data}
+read_CEWL_file <- function(filename) {
+  
+   # save helpful info
+   date <- substr(filename, 1, 10)
+   name <- substr(filename, 19, 21)
+   
+   ## load file
+   dat <- read.csv(file.path("./Data/AquaFlux data", filename), 
+                   header = TRUE, 
+                   fileEncoding="UTF-8-BOM") %>%
+      # select only the relevant values
+      dplyr::select(time_sec = 'Time..sec.',
+                    CEWL_g_m2h = 'Flux..g..m2h..', 
+                    msmt_temp_C = 'AmbT..C.', 
+                    msmt_RH_percent = 'AmbRH....'
+                    ) %>%
+      # use filename info     
+      dplyr::mutate(date = date,
+                    lizard_ID = name)
+   # return the dataframe for that single csv file
+   dat
+   
+}
+```
+
+
+
+Apply function to all files, compile, and incorporate timing:
+
+```{r load and filter CEWL data}
+# apply function to get data from all csvs
+all_CEWL_data <- lapply(filenames_aquaflux, read_CEWL_file) %>%
+   # paste all data files together into one df by row
+   reduce(rbind) %>%
+   # properly format data classes
+   mutate(lizard_ID = as.factor(lizard_ID),
+          date = as.Date(date, format = "%d-%m-%Y")
+          ) %>%
+   # add actual times
+   left_join(AF_starts_tidy, by = c("date", "lizard_ID")) %>%
+   # calculate current times for each point
+   mutate(date_time = date_time_start + floor(time_sec))
+summary(all_CEWL_data)
+unique(all_CEWL_data$date)
+```
+
+
+
+## Weather Data
+
+get filenames:
+
+```{r weather filenames}
+filenames_weather <- list.files(path = "./Data/Weather Data", 
+                                pattern = ".csv")
+```
+
+Weather data for each capture day includes the following variables: 
+
+- date 
+- time 
+- temp_f = temperature in Fahrenheit 
+- wind_speed_mph = wind speed in miles per hr
+- relative_humidity_percent = % relative humidity 
+- solar_rad_w_m2 = Watts per square meter of solar radiation 
+- precip_inches = inches of precipitation
+
+```{r function to load weather data}
+read_weather_file <- function(filename) {
+  
+   # read file
+   dat <- read.csv(file.path("./Data/Weather Data", filename), 
+                   header = TRUE, # each csv has headers
+                   check.names = F,
+                   sep = ";" #separate data via semicolons
+                   )
+  # return the dataframe for that single csv file
+  dat
+  
+}
+```
+
+Apply function to all dataframes and compile:
+
+```{r load and filter weather data}
+# apply function to get data from all csvs
+all_weather_data <- lapply(filenames_weather, read_weather_file) %>%
+  # paste all data files together into one df by row
+  reduce(rbind) %>%
+      # select only the relevant values
+      dplyr::select(date = "Date",
+                    time = "Time",
+                    temp_F = "Temperature (\xb0F)", 
+                    wind_speed_mph = "Wind Speed (ave) (mph)", 
+                    relative_humidity_percent = "Relative Humidity (% RH)",
+                    solar_rad_W_m2 = "Pyranometer 0-2000 W/m\xb2 (W/m\xb2)",
+                    precip_inches = "Precipitation II (inch)"
+                    ) %>%
+      # properly format data classes
+      dplyr::mutate(date_time = as.POSIXct(paste(date, time), 
+                                           format = "%m/%d/%y %I:%M %p"),
+                    date = as.Date(date, format = "%m/%d/%y"),
+                    time = as.POSIXct(time, format = "%I:%M %p"),
+                    temp_F = as.numeric(temp_F), 
+                    temp_C =(temp_F-32)*(5/9),
+                    relative_humidity_percent = as.numeric(relative_humidity_percent),
+                    solar_rad_W_m2 = as.numeric(solar_rad_W_m2),
+                    wind_speed_mph = as.numeric(wind_speed_mph),
+                    precip_inches = as.numeric(precip_inches)
+                    ) %>%
+   dplyr::filter(complete.cases(temp_C, relative_humidity_percent))
+                   
+summary(all_weather_data)
+```
+
+
+Get times we want to know weather data for:
+
+```{r weather times wanted}
+# get earliest and latest capture times for a given day
+collection_data %>%
+  group_by(date) %>%
+  summarise(min(time_capture), max(time_capture))
+
+# list times weather station has recordings, 1h before to 1h after captures for a given day
+t1_days <- seq(as.POSIXct("2021-10-05 09:00"),
+               as.POSIXct("2021-10-05 13:00"), "15 min")
+t2_days <- seq(as.POSIXct("2021-10-11 09:00"),
+               as.POSIXct("2021-10-11 13:00"), "15 min")
+t3_days <- seq(as.POSIXct("2021-10-12 09:00"),
+               as.POSIXct("2021-10-12 17:00"), "15 min")
+t4_days <- seq(as.POSIXct("2021-10-18 09:00"),
+               as.POSIXct("2021-10-18 13:00"), "15 min")
+t5_days <- seq(as.POSIXct("2021-10-19 09:00"),
+               as.POSIXct("2021-10-19 13:00"), "15 min")
+exp_dates <- data.frame(date_time = c(t1_days, t2_days, t3_days, 
+                                      t4_days, t5_days)) %>%
+   dplyr::mutate(date = as.Date(substr(date_time, 1, 10)))
+summary(exp_dates)
+```
+
+subset weather data including ~1hr buffer before first and after last capture times for each measurement day:
+
+```{r actual weather wanted}
+weather_data_subset <- all_weather_data %>%
+   dplyr::filter(date_time %in% exp_dates$date_time)
+summary(weather_data_subset)
+```
+
+
+### Weather Models
+
+**Temperature, relative humidity, and wind speed were significantly different among capture days**
+
+#### Temperature
+
+ANOVA:
+
+```{r temp ANOVA}
+weather_temp_aov <- aov(data = weather_data_subset, 
+                        temp_C ~ as.factor(date))
+summary(weather_temp_aov)
+TukeyHSD(weather_temp_aov)
+```
+
+Figure:
+
+
+```{r temp diffs fig}
+ggplot(data = weather_data_subset) + 
+   aes(x = as.factor(date), 
+       y = temp_C, 
+       color = as.factor(date)) +
+   geom_boxplot(size = 1) +
+   geom_jitter(size = 0.6,
+               alpha = 0.6) +
+   theme_classic() + 
+   xlab("Date") + 
+   ylab("Average Temperature During Capture (C)") + 
+   #annotate("text", x = 3, y = 22, label = "example", size = 6) +
+   scale_color_brewer(palette = "Set2") +
+   theme(text = element_text(color = "black", 
+                            family = "sans", 
+                            size = 18),
+         axis.text = element_text(color = "black", 
+                                 family = "sans", 
+                                 size = 14),
+         legend.text.align = 0,
+         legend.position = "none") -> weather_temp_fig
+weather_temp_fig
+```
+
+
+
+
+
+#### Relative Humidity
+
+*NOTE: will need to convert to VPD if we intend to add this to the LMM, but it's more likely we will just incorporate via capture_date random effect.*
+
+```{r RH ANOVA}
+weather_humid_aov <- aov(data = weather_data_subset, 
+                        relative_humidity_percent ~ as.factor(date))
+summary(weather_humid_aov)
+TukeyHSD(weather_humid_aov)
+```
+
+```{r RH diffs fig}
+ggplot(data = weather_data_subset) + 
+   aes(x = as.factor(date), 
+       y = relative_humidity_percent, 
+       color = as.factor(date)) +
+   geom_boxplot(size = 1) +
+   geom_jitter(size = 0.6,
+               alpha = 0.6) +
+   theme_classic() + 
+   xlab("Date") + 
+   ylab("Average Relative Humidity During Capture (%)") + 
+   #annotate("text", x = 3, y = 22, label = "example", size = 6) +
+   scale_color_brewer(palette = "Set2") +
+   theme(text = element_text(color = "black", 
+                            family = "sans", 
+                            size = 18),
+         axis.text = element_text(color = "black", 
+                                 family = "sans", 
+                                 size = 14),
+         legend.text.align = 0,
+         legend.position = "none") -> weather_humid_fig
+weather_humid_fig
+```
+
+
+#### Solar Radiation
+
+```{r sorad ANOVA}
+weather_sorad_aov <- aov(data = weather_data_subset, 
+                        solar_rad_W_m2 ~ as.factor(date))
+summary(weather_sorad_aov)
+TukeyHSD(weather_sorad_aov)
+```
+
+```{r sorad diffs fig}
+ggplot(data = weather_data_subset) + 
+   aes(x = as.factor(date), 
+       y = solar_rad_W_m2 , 
+       color = as.factor(date)) +
+   geom_boxplot(size = 1) +
+   geom_jitter(size = 0.6,
+               alpha = 0.6) +
+   theme_classic() + 
+   xlab("Date") + 
+   ylab("Average Solar Radiation During Capture (W/m2)") + 
+   #annotate("text", x = 3, y = 22, label = "example", size = 6) +
+   scale_color_brewer(palette = "Set2") +
+   theme(text = element_text(color = "black", 
+                            family = "sans", 
+                            size = 18),
+         axis.text = element_text(color = "black", 
+                                 family = "sans", 
+                                 size = 14),
+         legend.text.align = 0,
+         legend.position = "none") -> weather_solar_fig
+weather_solar_fig
+```
+
+
+#### Wind Speed
+
+```{r wind speed ANOVA}
+weather_wind_aov <- aov(data = weather_data_subset, 
+                        wind_speed_mph ~ as.factor(date))
+summary(weather_wind_aov)
+TukeyHSD(weather_wind_aov)
+```
+
+```{r wind speed fig}
+ggplot(data = weather_data_subset) + 
+   aes(x = as.factor(date), 
+       y = wind_speed_mph , 
+       color = as.factor(date)) +
+   geom_boxplot(size = 1) +
+   geom_jitter(size = 0.6,
+               alpha = 0.6) +
+   theme_classic() + 
+   xlab("Date") + 
+   ylab("Average Wind Speed During Capture (mph)") + 
+   #annotate("text", x = 3, y = 22, label = "example", size = 6) +
+   scale_color_brewer(palette = "Set2") +
+   theme(text = element_text(color = "black", 
+                            family = "sans", 
+                            size = 18),
+         axis.text = element_text(color = "black", 
+                                 family = "sans", 
+                                 size = 14),
+         legend.text.align = 0,
+         legend.position = "none") -> weather_wind_fig
+weather_wind_fig
+```
+
+
+
+
+
+
+## Thermocouple Data
+
+filenames:
+
+```{r thermocouple filenames}
+# make a list of file names of all data to load in
+filenames_thermocouple <- list.files(path = "./Data/Thermocouple data",
+                                     pattern = ".csv")
+```
+
+Thermocouple variables that we will load in with each file: 
+
+- date 
+- time 
+- lizard ID 
+- value_cloacal = cloacal temperature in Celcius 
+- thermocouple_cloacal = label of cloacal thermocouple 
+- value_dorsal = dorsal temperature in Celcius 
+- thermocouple_dorsal = label of dorsal thermocouple 
+
+```{r function to load thermocouple data}
+read_thermocouple_files <- function(filename) {
+   
+   # load file
+   dat <- read.csv(file.path("./Data/Thermocouple data",
+                             filename), 
+                   header = TRUE # each csv has headers
+                   ) %>%
+      # select only the relevant values
+      dplyr::select(date = 'Date',
+                    time = 'Time',
+                    lizard_ID = 'Lizard',
+                    value_cloacal = 'Value_Cloacal',
+                    thermocouple_cloacal = 'Thermocouple_Cloacal',
+                    value_dorsal = 'Value_Dorsal',
+                    thermocouple_dorsal = 'Thermocouple_Dorsal'
+                    ) 
+     
+  # return the dataframe for that single csv file
+  dat
+}
+```
+
+apply function and format variables:
+
+```{r load and filter thermocouple data}
+# apply function to get data from all csvs
+all_thermocouple_data <- lapply(filenames_thermocouple,
+                                read_thermocouple_files) %>%
+   # paste all data files together into one df by row
+   reduce(rbind) %>%
+   # properly format data classes
+   mutate(date_time = as.POSIXct(paste(date, time), 
+                                 format = "%m/%d/%Y %H:%M:%S"),
+          date = as.Date(date, format = "%m/%d/%Y"),
+          time = as.POSIXct(time, format = "%H:%M:%S"),
+          lizard_ID = as.factor(lizard_ID),
+          thermocouple_cloacal = as.factor(thermocouple_cloacal),
+          thermocouple_dorsal = as.factor(thermocouple_dorsal),
+          value_cloacal = as.numeric(value_cloacal),
+          value_dorsal = as.numeric(value_dorsal)
+          ) %>%
+   dplyr::filter(complete.cases(value_cloacal, value_dorsal)) %>%
+   # need to get rid of non-measurements when TC not plugged in, temp = 9999
+   dplyr::filter(value_dorsal < 50) %>%
+   dplyr::filter(value_cloacal < 50)
+
+summary(all_thermocouple_data)
+```
+
+
+## TC Calibration Data
+
+The thermocouples tend to drift 1-2 C off of the true temperature, so we collected reference data to make a calibration curve for each one.
+
+Get all the calibration data:
+
+```{r load TC calibration data}
+TCD1 <- read.csv("./Data/TC Calibration/thermocouple calibration data 1.csv")
+TCD2 <- read.csv("./Data/TC Calibration/thermocouple calibration data 2.csv")
+TCD3 <- read.csv("./Data/TC Calibration/thermocouple calibration data 3.csv")
+TCR1 <- read.csv("./Data/TC Calibration/thermocouple_calibration_1_ref.csv") %>%
+   mutate(date = "9/28/21")
+TCR2 <- read.csv("./Data/TC Calibration/thermocouple_calibration_2_ref.csv") %>%
+   mutate(date = "10/1/21")
+TCR3 <- read.csv("./Data/TC Calibration/thermocouple_calibration_3_ref.csv") %>%
+   mutate(date = "1/8/22")
+TC_key <- read.csv("./Data/TC Calibration/thermocouple_calibration_key.csv")
+```
+
+Reorganize repeated columns into vertical form:
+
+```{r wrangle TC data}
+# thermocouple calibration data 1
+TCD1.1 <- TCD1 %>% dplyr::select(date = Date, 
+                                 time = Time, 
+                                 temp_C = Value, 
+                                 port = Unit)
+TCD1.2 <- TCD1 %>% dplyr::select(date = Date, 
+                                 time = Time, 
+                                 temp_C = Value.1, 
+                                 port = Unit.1)
+TCD1.3 <- TCD1 %>% dplyr::select(date = Date, 
+                                 time = Time, 
+                                 temp_C = Value.2, 
+                                 port = Unit.2)
+# thermocouple calibration data 2
+TCD2.1 <- TCD2 %>% dplyr::select(date = Date, 
+                                 time = Time, 
+                                 temp_C = Value, 
+                                 port = Unit)
+TCD2.2 <- TCD2 %>% dplyr::select(date = Date, 
+                                 time = Time, 
+                                 temp_C = Value.1, 
+                                 port = Unit.1)
+TCD2.3 <- TCD2 %>% dplyr::select(date = Date, 
+                                 time = Time, 
+                                 temp_C = Value.2, 
+                                 port = Unit.2)
+TCD2.4 <- TCD2 %>% dplyr::select(date = Date, 
+                                 time = Time, 
+                                 temp_C = Value.3, 
+                                 port = Unit.3)
+# thermocouple calibration data 3
+TCD3.1 <- TCD3 %>% dplyr::select(date = Date, 
+                                 time = Time, 
+                                 temp_C = Value, 
+                                 port = Unit)
+# format and combine
+TC_ref <- TCR1 %>%
+   rbind(TCR2) %>%
+   rbind(TCR3) %>%
+   mutate(date = as.Date(date, format = "%m/%d/%y")) %>%
+   dplyr::filter(complete.cases(reference_temp))
+TC_key_formatted <- TC_key %>%
+   mutate(date = as.Date(date, format = "%m/%d/%y"),
+          lead = as.factor(lead),
+          port = as.factor(port))
+calibration_data <- TCD1.1 %>%
+   rbind(TCD1.2) %>%
+   rbind(TCD1.3) %>%
+   rbind(TCD2.1) %>%
+   rbind(TCD2.2) %>%
+   rbind(TCD2.3) %>%
+   rbind(TCD2.4) %>%
+   rbind(TCD3.1) %>%
+   mutate(date = as.Date(date, format = "%m/%d/%Y"),
+          time = substr(time, 1, 5),
+          port = as.factor(substr(port, 1, 2))
+          ) %>%
+   left_join(TC_key_formatted, by = c("date", "port")) %>%
+   left_join(TC_ref, by = c("date", "time")) %>%
+   dplyr::filter(complete.cases(reference_temp))
+summary(calibration_data)
+```
+
+
+# Data Wrangling
+
+## CEWL Errors
+
+Remove sections of points where the probe got disconnected:
+
+lizard      note
+403	      error @520, moved @650
+405	      error @320 &660
+406	      error @250 & 850
+408	      broke seal ~170
+411	      large move @400
+414	      large move @660
+426	      Big move
+436	      move @~700
+
+
+### Lizard 403
+
+This lizard's data will NOT be included in analyses due to suspected Aquaflux failure to re-equibrilate.
+
+```{r 403 CEWL err}
+all_CEWL_data %>%
+   dplyr::filter(lizard_ID == 403) %>%
+       ggplot(aes(x = time_sec,
+           y = CEWL_g_m2h)) + 
+   geom_point() + 
+   geom_vline(xintercept = 520) + # first error note
+   geom_vline(xintercept = 650) + # second error note
+   xlim(0, 900) + ylim(5,15)
+```
+
+```{r 403 CEWL err fix}
+l403_remove <- c(500:560, 600:660)
+l403_filtered <- all_CEWL_data %>%
+   dplyr::filter(lizard_ID == 403) %>%
+   dplyr::filter(floor(time_sec) %nin% l403_remove)
+ggplot(data = l403_filtered,
+       aes(x = time_sec,
+           y = CEWL_g_m2h)) + 
+   geom_point() + 
+   geom_vline(xintercept = 520) + # first error note
+   geom_vline(xintercept = 650) + # second error note
+   xlim(60, 900) #+ ylim(5, 12)
+summary(l403_filtered)
+```
+
+
+### Lizard 405
+
+This lizard's data will NOT be included in analyses due to suspected Aquaflux failure to re-equibrilate.
+
+
+```{r 405 CEWL err}
+all_CEWL_data %>%
+   dplyr::filter(lizard_ID == 405) %>%
+       ggplot(aes(x = time_sec,
+           y = CEWL_g_m2h)) + 
+   geom_point() + 
+   geom_vline(xintercept = 320) + # error 1
+   geom_vline(xintercept = 660) + # error 2
+   xlim(0,900) + ylim(0,15)
+```
+
+```{r 405 CEWL err fix}
+l405_remove <- c(297:357, 635:695)
+l405_filtered <- all_CEWL_data %>%
+   dplyr::filter(lizard_ID == 405) %>%
+   dplyr::filter(floor(time_sec) %nin% l405_remove)
+ggplot(data = l405_filtered,
+       aes(x = time_sec,
+           y = CEWL_g_m2h)) + 
+   geom_point() + 
+   geom_vline(xintercept = 320) + 
+   geom_vline(xintercept = 660) + 
+   xlim(60, 900) + ylim(0, 12)
+summary(l405_filtered)
+```
+
+### Lizard 406
+
+Will remove from 238 to 287 seconds, 60 seconds total, for beginning error and last 81 seconds (820 to 901 seconds) due to failure to re-equibrilate after second error.
+
+```{r 406 CEWL err}
+all_CEWL_data %>%
+   dplyr::filter(lizard_ID == 406) %>%
+       ggplot(aes(x = time_sec,
+           y = CEWL_g_m2h)) + 
+   geom_point() + 
+   geom_vline(xintercept = 238) + # error 1
+   geom_vline(xintercept = 287) + # error 2
+   geom_hline(yintercept = 7.5) +
+   xlim(200, 900) + ylim(0, 12)
+```
+
+```{r 406 CEWL err fix}
+l406_remove <- c(238:287, 820:901)
+l406_filtered <- all_CEWL_data %>%
+   dplyr::filter(lizard_ID == 406) %>%
+   dplyr::filter(floor(time_sec) %nin% l406_remove)
+ggplot(data = l406_filtered,
+       aes(x = time_sec,
+           y = CEWL_g_m2h)) + 
+   geom_point() +
+   geom_vline(xintercept = 250) + # error 1
+   geom_vline(xintercept = 850) + # error 2
+   xlim(60, 900) + ylim(0, 12)
+summary(l406_filtered)
+```
+
+### Lizard 408
+
+Will remove one section from 144 to 222 seconds, 80 seconds total.
+
+```{r 408 CEWL err}
+all_CEWL_data %>%
+   dplyr::filter(lizard_ID == 408) %>%
+       ggplot(aes(x = time_sec,
+           y = CEWL_g_m2h)) + 
+   geom_point() + 
+   geom_vline(xintercept = 144) + 
+   geom_vline(xintercept = 222) + # error @170 when seal broke
+   geom_hline(yintercept = 26) +
+   xlim(100,300) + ylim(0,40)
+```
+
+```{r 408 CEWL err fix}
+l408_remove <- c(144:222) 
+l408_filtered <- all_CEWL_data %>%
+   dplyr::filter(lizard_ID == 408) %>%
+   dplyr::filter(floor(time_sec) %nin% l408_remove)
+ggplot(data = l408_filtered,
+       aes(x = time_sec,
+           y = CEWL_g_m2h)) + 
+   geom_point() + 
+   geom_vline(xintercept = 144) + # error @170 when seal broke
+   geom_vline(xintercept = 222) + 
+   xlim(60, 900) + ylim(0, 35)
+summary(l408_filtered)
+```
+
+### Lizard 411
+
+Will remove one section from 301 to 415 seconds, 114 seconds total.
+
+```{r 411 CEWL err}
+all_CEWL_data %>%
+   dplyr::filter(lizard_ID == 411) %>%
+       ggplot(aes(x = time_sec,
+           y = CEWL_g_m2h)) + 
+   geom_point() + 
+   geom_vline(xintercept = 301) + 
+   geom_vline(xintercept = 415) + # large move at 400s
+   geom_hline(yintercept = 7) +
+   xlim(250,450) + ylim(0,10)
+```
+
+```{r 411 CEWL err fix}
+l411_remove <- c(301:415)
+l411_filtered <- all_CEWL_data %>%
+   dplyr::filter(lizard_ID == 411) %>%
+   dplyr::filter(floor(time_sec) %nin% l411_remove)
+ggplot(data = l411_filtered,
+       aes(x = time_sec,
+           y = CEWL_g_m2h)) + 
+   geom_point() + 
+   geom_vline(xintercept = 297) + 
+   geom_vline(xintercept = 660) + 
+   xlim(60, 900) + ylim(0, 12)
+summary(l411_filtered)
+```
+
+### Lizard 414
+
+Will remove last 246 seconds (655 to 901 seconds) due to failure to re-equibrilate after error.
+
+```{r 414 CEWL err}
+all_CEWL_data %>%
+   dplyr::filter(lizard_ID == 414) %>%
+       ggplot(aes(x = time_sec,
+           y = CEWL_g_m2h)) + 
+   geom_point() + 
+   geom_vline(xintercept = 655) + # large move @660s
+   geom_vline(xintercept = 720) + 
+   xlim(0,900) + ylim(0,15)
+```
+
+```{r 414 CEWL err fix}
+l414_remove <- c(655:901)
+l414_filtered <- all_CEWL_data %>%
+   dplyr::filter(lizard_ID == 414) %>%
+   dplyr::filter(floor(time_sec) %nin% l414_remove)
+ggplot(data = l414_filtered,
+       aes(x = time_sec,
+           y = CEWL_g_m2h)) + 
+   geom_point() + 
+   geom_vline(xintercept = 660) + # large move @660s
+   xlim(60, 900) + ylim(0, 12)
+summary(l414_filtered)
+```
+
+### Lizard 426
+
+Will remove 404 seconds (497 to 901 seconds) due to failure to re-equibrilate after error.
+
+```{r 426 CEWL err}
+all_CEWL_data %>%
+   dplyr::filter(lizard_ID == 426) %>%
+       ggplot(aes(x = time_sec,
+           y = CEWL_g_m2h)) + 
+   geom_point() + 
+   geom_vline(xintercept = 497) + 
+   geom_vline(xintercept = 630) + 
+   xlim(400, 900) + ylim(0,15)
+```
+
+```{r 426 CEWL err fix}
+l426_remove <- c(497:901)
+l426_filtered <- all_CEWL_data %>%
+   dplyr::filter(lizard_ID == 426) %>%
+   dplyr::filter(floor(time_sec) %nin% l426_remove)
+ggplot(data = l426_filtered,
+       aes(x = time_sec,
+           y = CEWL_g_m2h)) + 
+   geom_point() + 
+   geom_vline(xintercept = 297) + 
+   geom_vline(xintercept = 660) + 
+   xlim(60, 900) + ylim(0, 12)
+summary(l426_filtered)
+```
+
+### Lizard 436
+
+Will remove 201 seconds (700 to 901 seconds) due to failure to re-equibrilate after error.
+
+```{r 436 CEWL err}
+all_CEWL_data %>%
+   dplyr::filter(lizard_ID == 436) %>%
+       ggplot(aes(x = time_sec,
+           y = CEWL_g_m2h)) + 
+   geom_point() + 
+   geom_vline(xintercept = 700) + # moved here
+   geom_vline(xintercept = 820) + 
+   xlim(0, 900) + ylim(15, 30)
+```
+
+```{r 436 CEWL err fix}
+l436_remove <- c(700:901)
+l436_filtered <- all_CEWL_data %>%
+   dplyr::filter(lizard_ID == 436) %>%
+   dplyr::filter(floor(time_sec) %nin% l436_remove)
+ggplot(data = l436_filtered,
+       aes(x = time_sec,
+           y = CEWL_g_m2h)) + 
+   geom_point() + 
+   geom_vline(xintercept = 297) + 
+   geom_vline(xintercept = 660) + 
+   xlim(0, 900) + ylim(0, 30)
+summary(l436_filtered)
+```
+
+*error summary*
+Two lizards (403 and 405) will be completely removed due to suspected Aquaflux failure to re-equibrilate. Six lizards had spikes noted at the time of data collection that were caused by the AquaFlux seal being broken, and we removed those so they will not be considered in our data analyses. Of those six noted spike errors, three lizards had last remaining portion of data removed due to suspected Aquaflux failure to re-equibrilate.
+
+
+
+## Put Error-Removed Data Back
+
+Data for lizards 403 and 405 will be removed completely, and the rest will have their cleaned-up data added back into the dataframe.
+
+```{r recompile CEWL data}
+err_lizards <- c(403, 405, 406, 408, 411, 414, 426, 436)
+filtered1_CEWL_data <- all_CEWL_data %>%
+   dplyr::filter(lizard_ID %nin% err_lizards) %>%
+   rbind(l406_filtered) %>%
+   rbind(l408_filtered) %>%
+   rbind(l411_filtered) %>%
+   rbind(l414_filtered) %>%
+   rbind(l426_filtered) %>%
+   rbind(l436_filtered) #%>%
+  #mutate(lizard_ID = as.factor(lizard_ID))
+
+summary(filtered1_CEWL_data)
+unique(filtered1_CEWL_data$lizard_ID)
+```
+
+
+
+
+## CEWL Equilibration
+
+The evaporimeter also takes 1-2 minutes to equilibrate to the lizard at the start of each time series, so we want to estimate when equilibration was complete for each lizard.
+
+```{r when equilibrated}
+ggplot(data = filtered1_CEWL_data,
+       aes(x = time_sec,
+           y = CEWL_g_m2h, 
+           color = lizard_ID)) + 
+   geom_point(size = 0.5, alpha = 0.5) + 
+   geom_vline(xintercept = 60) + 
+   geom_vline(xintercept = 120) +
+   xlim(0, 200)
+
+# find max beginning value
+start_peaks <- filtered1_CEWL_data %>%
+   dplyr::filter(time_sec < 80) %>%
+   group_by(lizard_ID) %>%
+   mutate(peak_CEWL = max(CEWL_g_m2h)) %>%
+   dplyr::filter(peak_CEWL == CEWL_g_m2h) %>%
+  # dplyr::filter(lizard_ID != 428) %>% # I think this guy just KEPT INCREASING
+   # BUT filtering out lizards RN makes for-loop not work
+   group_by(lizard_ID) %>%
+   summarise(peak_time = max(time_sec))
+summary(start_peaks)
+```
+
+
+
+Apply peak times to filter out evaporimeter equilibration, remove **60** seconds following peak CEWL during AquaFlux equibrilation to ensure Aquaflux reaches true equilibrium. 
+
+```{r for loop to remove beginning equilibration}
+# initialize empty df
+filtered2_df <- data.frame()
+
+# lizard = lizard_ID & list = 
+for (lizard in unique(filtered1_CEWL_data$lizard_ID)) {
+   
+   # get all data for each lizard
+   this_lizard <- filtered1_CEWL_data %>%
+      dplyr::filter(lizard_ID == lizard)
+   
+   # get time of beginning peak
+   this_liz_peak <- start_peaks %>% 
+      dplyr::filter(lizard_ID == lizard)
+   
+   # calculate n seconds after peak
+   end <- floor(this_liz_peak$peak_time + 60) # +60 seconds to time of max peak
+   
+   # make a list of the seconds to remove
+   remove <- c(0:end)
+   
+   # clean each lizard's data
+   this_liz_cleaned <- this_lizard %>%
+      dplyr::filter(floor(time_sec) %nin% remove)
+
+   # append to df
+   filtered2_df <- filtered2_df %>%
+      rbind(this_liz_cleaned)
+   
+   # should compile themselves into filtered_df 
+   # which will be ready to use after running this loop
+}
+```
+
+Check that the dataframe was compiled with ALL the lizards and that the plot looks better now:
+
+```{r check if better}
+summary(filtered2_df)
+unique(filtered2_df$lizard_ID)
+ggplot(data = filtered2_df,
+       aes(x = time_sec,
+           y = CEWL_g_m2h,
+           color = lizard_ID)) + 
+   geom_point(size = 0.1, alpha = 0.5) + 
+   geom_vline(xintercept = 60) + 
+   geom_vline(xintercept = 120)
+```
+
+
+DF looks complete and relative change in CEWL looks much more reasonable now that the equilibration period was removed.
+
+
+## Calibrate Thermocouple Data
+
+First, calculate and save regression curves:
+
+```{r calculate thermocouple calibration curves}
+# calculate regression curves
+regression_a <- lm(data = calibration_data[calibration_data$lead == "A",],
+                   temp_C ~ reference_temp) 
+regression_b <- lm(data = calibration_data[calibration_data$lead == "B",],
+                   temp_C ~ reference_temp)
+regression_c <- lm(data = calibration_data[calibration_data$lead == "C",],
+                   temp_C ~ reference_temp)
+regression_d <- lm(data = calibration_data[calibration_data$lead == "D",],
+                   temp_C ~ reference_temp)
+regression_e <- lm(data = calibration_data[calibration_data$lead == "E",],
+                   temp_C ~ reference_temp)
+regression_f <- lm(data = calibration_data[calibration_data$lead == "F",],
+                   temp_C ~ reference_temp)
+regression_g <- lm(data = calibration_data[calibration_data$lead == "G",],
+                   temp_C ~ reference_temp)
+regression_h <- lm(data = calibration_data[calibration_data$lead == "H",],
+                   temp_C ~ reference_temp)
+
+# create df to store calibration equations
+TC_calibration <- data.frame(TC_A = (coef(regression_a))) %>% 
+   `rownames<-`(c("intercept", "slope"))
+TC_calibration$TC_B <- coef(regression_b)
+TC_calibration$TC_C <- coef(regression_c)
+TC_calibration$TC_D <- coef(regression_d)
+TC_calibration$TC_E <- coef(regression_e)
+TC_calibration$TC_F <- coef(regression_f)
+TC_calibration$TC_G <- coef(regression_g)
+TC_calibration$TC_H <- coef(regression_h)
+TC_calibration
+```
+
+Next, use calibration curves to correct the data we measured:
+
+```{r apply thermocouple calibration curves}
+# this applies respective calibration equation 
+# to all cloacal thermocouple data points of that proper thermocouple
+# 2=slope & 1=intercept
+
+calibrated_TC_data <- all_thermocouple_data %>%
+      # do for cloacal thermocouple temps
+   mutate(calibrated_cloacal_temp = case_when(
+      thermocouple_cloacal == "A" ~ value_cloacal*TC_calibration$TC_A[2] +
+                                           TC_calibration$TC_A[1],
+      thermocouple_cloacal == "B" ~ value_cloacal*TC_calibration$TC_B[2] +
+                                           TC_calibration$TC_B[1],
+      thermocouple_cloacal == "C" ~ value_cloacal*TC_calibration$TC_C[2] +
+                                           TC_calibration$TC_C[1],
+      thermocouple_cloacal == "D" ~ value_cloacal*TC_calibration$TC_D[2] +
+                                           TC_calibration$TC_D[1],
+      thermocouple_cloacal == "E" ~ value_cloacal*TC_calibration$TC_E[2] +
+                                           TC_calibration$TC_E[1],
+      thermocouple_cloacal == "F" ~ value_cloacal*TC_calibration$TC_F[2] +
+                                           TC_calibration$TC_F[1],
+      thermocouple_cloacal == "G" ~ value_cloacal*TC_calibration$TC_G[2] +
+                                           TC_calibration$TC_G[1],
+      thermocouple_cloacal == "H" ~ value_cloacal*TC_calibration$TC_H[2] +
+                                           TC_calibration$TC_H[1]
+                                                ),
+      # do for dorsal thermocouples also
+      calibrated_dorsal_temp = case_when(
+      thermocouple_dorsal == "A" ~ value_dorsal*TC_calibration$TC_A[2] +
+                                           TC_calibration$TC_A[1],
+      thermocouple_dorsal == "B" ~ value_dorsal*TC_calibration$TC_B[2] +
+                                           TC_calibration$TC_B[1],
+      thermocouple_dorsal == "C" ~ value_dorsal*TC_calibration$TC_C[2] +
+                                           TC_calibration$TC_C[1],
+      thermocouple_dorsal == "D" ~ value_dorsal*TC_calibration$TC_D[2] +
+                                           TC_calibration$TC_D[1],
+      thermocouple_dorsal == "E" ~ value_dorsal*TC_calibration$TC_E[2] +
+                                           TC_calibration$TC_E[1],
+      thermocouple_dorsal == "F" ~ value_dorsal*TC_calibration$TC_F[2] +
+                                           TC_calibration$TC_F[1],
+      thermocouple_dorsal == "G" ~ value_dorsal*TC_calibration$TC_G[2] +
+                                           TC_calibration$TC_G[1],
+      thermocouple_dorsal == "H" ~ value_dorsal*TC_calibration$TC_H[2] +
+                                           TC_calibration$TC_H[1]
+                                                )
+                  )
+summary(calibrated_TC_data)
+```
+
+
+
+## Correct Thermocouple Times
+
+The TC logger times were off by a few minutes compared to the evaporimeter, but we consistently started the evaporimeter immediately following the TC (with the exception of lizards 428, 437, 439 whose temperature data was started late and will be removed from the temperature dataset). 
+
+
+First, remove ~5 seconds from starting, then create time_sec variable:
+
+```{r correct TC start times}
+TC_corrected_data <- calibrated_TC_data %>%
+                # remove lizards with messed up data
+   dplyr::filter(lizard_ID %nin% c(428, 437, 439)) %>% 
+   group_by(lizard_ID) %>%
+   mutate(min_time = min(date_time)) %>%
+                # shift start time to more closely match that for CEWL
+   dplyr::filter(date_time > (min_time + 4)) %>%
+   group_by(lizard_ID) %>%
+              # put time in the same format at CEWL data
+   mutate(start_time = min(date_time),
+          time_sec = as.numeric(date_time - start_time)) %>%
+              # remove extra time for loggers stopped late, after the 15min period
+  dplyr::filter(time_sec <= (15*60)) 
+
+summary(TC_corrected_data)
+hist(TC_corrected_data$time_sec)
+```
+
+
+Good, each lizard should have up to 900 seconds of data, which is what we see in the histogram. 
+
+
+
+# Summary Stats
+
+## Relative CEWL
+
+```{r get CEWL starting values}
+starting_CEWL <- filtered2_df %>%
+   group_by(lizard_ID) %>%
+   mutate(start_time = min(time_sec)) %>%
+   dplyr::filter(time_sec == start_time) %>%
+   dplyr::select(lizard_ID, starting_CEWL = CEWL_g_m2h)
+head(starting_CEWL)
+summary(starting_CEWL)
+```
+
+
+
+
+
+## Join Dataframes
+
+Lizards 416 (not logged at all), 428, 437, and 439 (logger started very late), do not have thermocouple data, so they should be in the CEWL_time_series dataframe, but not the temp_time_series dataframe.
+
+Lizards 403 and 405 have too many errors so they should have been removed completely and will not show up in either of the dataframes below:
+
+```{r join all dataframes}
+CEWL_time_series <- filtered2_df %>%
+   mutate(time_sec = as.numeric(floor(time_sec))) %>%
+   left_join(collection_data, 
+             by = c('date', "lizard_ID" = "individual_ID")) %>%
+   dplyr::select(time_sec, date,
+                 lizard_ID, treatment,
+                 mass_g, SVL_mm,
+                 chamber_time_elapsed_hr,
+                 CEWL_g_m2h, 
+                 msmt_temp_C, msmt_RH_percent) %>%
+   left_join(starting_CEWL, by = "lizard_ID") %>%
+   mutate(relative_CEWL = CEWL_g_m2h - starting_CEWL,
+          treatment = as.factor(treatment),
+          time_min = time_sec/60) 
+summary(CEWL_time_series)
+unique(CEWL_time_series$lizard_ID)
+length(unique(CEWL_time_series$lizard_ID)) # 37
+
+temp_time_series <- CEWL_time_series %>%
+   # filter out lizards with missing TC data
+   dplyr::filter(lizard_ID %nin% c(428, 437, 439, 416)) %>%
+   left_join(TC_corrected_data, 
+             by = c('date', 'time_sec', "lizard_ID")) %>%
+  dplyr::filter(complete.cases(calibrated_cloacal_temp, calibrated_dorsal_temp))
+summary(temp_time_series)
+unique(temp_time_series$lizard_ID)
+
+# check for lizards that should be in CEWL data but not temp data
+unique(CEWL_time_series$lizard_ID)[unique(CEWL_time_series$lizard_ID) %nin% unique(temp_time_series$lizard_ID)]
+length(unique(temp_time_series$lizard_ID)) # 33
+```
+
+
+
+
+
+
+## Mean Body Temps
+
+```{r mean body temps before after CEWL measurements}
+starts <- temp_time_series %>%
+  group_by(lizard_ID) %>%
+  dplyr::filter(time_sec == min(time_sec))
+starts %>% 
+  group_by(treatment) %>%
+  summarise(mean(calibrated_cloacal_temp, na.rm = T),
+            sd(calibrated_cloacal_temp, na.rm = T),
+            mean(calibrated_dorsal_temp, na.rm = T),
+            sd(calibrated_dorsal_temp, na.rm = T))
+
+ends <- temp_time_series %>%
+  group_by(lizard_ID) %>%
+  dplyr::filter(time_sec == max(time_sec))
+ends %>% 
+  group_by(treatment) %>%
+  summarise(mean(calibrated_cloacal_temp, na.rm = T),
+            sd(calibrated_cloacal_temp, na.rm = T),
+            mean(calibrated_dorsal_temp, na.rm = T),
+            sd(calibrated_dorsal_temp, na.rm = T))
+```
+
+
+## CEWL per Body Temp per Tmt
+
+I want to know what the typical CEWL value was at a given temperature, on average for lizards within treatment groups. 
+
+```{r}
+# first aggregate all body temps to the nearest degree, by indiv, then by tmt
+mean_CEWL_temp <- temp_time_series %>%
+  # round temp to nearest degree
+  mutate(rounded_cal_c_temp = round(calibrated_cloacal_temp, 0)) %>%
+  # avg each individual at each degree
+  group_by(lizard_ID, treatment, rounded_cal_c_temp) %>%
+  summarise(mean_CEWL = mean(CEWL_g_m2h)) %>%
+  # avg each tmt group at each degree
+  group_by(treatment, rounded_cal_c_temp) %>%
+  summarise(mean_mean_CEWL = mean(mean_CEWL))
+
+# get values for heating group only
+heat_CEWL <- mean_CEWL_temp %>%
+  dplyr::filter(treatment == "Heating") %>%
+  dplyr::select(treatment, rounded_cal_c_temp, heating_mm_CEWL = mean_mean_CEWL)
+
+# get values for cooling group only
+cool_CEWL <- mean_CEWL_temp %>%
+  dplyr::filter(treatment == "Cooling")%>%
+  dplyr::select(treatment, rounded_cal_c_temp, cooling_mm_CEWL = mean_mean_CEWL)
+
+# calculate the diff between groups at a common temperature
+compare_CEWL <- heat_CEWL %>%
+  left_join(cool_CEWL, by = 'rounded_cal_c_temp') %>%
+  mutate(diff = heating_mm_CEWL - cooling_mm_CEWL) %>%
+  dplyr::filter(complete.cases(diff)) 
+
+# summary stats
+compare_CEWL%>%
+  summarise(mean(diff), sd(diff), max(diff), min(diff))
+```
+
+
+# Export RDS files
+
+```{r}
+write_rds(temp_time_series, "Data/temp_time_series.RDS")
+write_rds(CEWL_time_series, "Data/CEWL_time_series.RDS")
+write_rds(collection_data, "Data/collection_dat_formatted.RDS")
+```
+
+
+
+
+
+

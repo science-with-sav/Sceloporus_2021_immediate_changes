@@ -1,0 +1,40 @@
+date,time_capture,sock,individual_ID,treatment,mass_g,SVL_mm,time_in_chamber,time_out_chamber,dorsal_couple,dorsal_lead_port,cloacal_couple,cloacal_lead_port,notes
+5/10/2021,10:50,G1,401,Heating,13.5,66,13:19,14:35,B,T2,F,T1,Had to go back in chamber
+5/10/2021,11:40,Q1,402,Heating,9.2,60,15:01,15:57,D,T2,F,T1,
+5/10/2021,11:26,W,403,Cooling,10.1,63,15:22,16:28,H,T2,C,T1,"error @520, moved @650"
+5/10/2021,10:10,H,404,Control,9.8,64,,,F,T2,D,T1,
+5/10/2021,10:44,M1,405,Cooling,9,61,14:23,15:23,A,T2,E,T1,error @320 &660
+5/10/2021,11:33,K1,406,Cooling,13.2,75,13:50,14:55,H,T2,C,T1,error @250 & 850
+5/10/2021,10:25,B1,407,Heating,10.4,70,16:00,17:16,E,T2,A,T1,
+5/10/2021,10:45,B1,408,Control,12.1,70,,,H,T2,C,T1,broke seal ~170
+11/10/2021,11:11,H,409,Control,11,65,,,A,T2,E,T1,
+11/10/2021,10:31,W1,410,Cooling,10,71,14:36,15:38,D,T2,F,T1,"weird graph, lots of time between start and placeing probe"
+11/10/2021,11:01,B1,411,Cooling,12.3,65,12:45,14:08,F,T2,D,T1,large move @400
+11/10/2021,11:53,K1,412,Heating,11,66,13:46,14:43,A,T2,E,T1,
+11/10/2021,10:10,M1,413,Control,9.5,63,,,D,T2,F,T1,already toe clipped
+11/10/2021,10:32,W,414,Cooling,9.4,63,15:45,16:54,A,T2,E,T1,large move @660
+11/10/2021,10:54,Q1,415,Control,14.6,71,,,A,T2,E,T1,
+11/10/2021,11:06,L1,416,Heating,9.6,64,15:20,16:27,B,T2,G,T1,lost thermo data
+12/10/2021,10:29,H1,417,Heating,13.4,69,12:28,13:35,G,T2,B,T1,
+12/10/2021,11:12,W1,418,Heating,15.3,71,14:06,15:07,B,T2,G,T1,
+12/10/2021,10:58,G1,419,Control,12.7,67,,,A,T2,E,T1,
+12/10/2021,11:07,N,420,Cooling,12.4,63,13:15,14:25,D,T2,F,T1,
+12/10/2021,11:03,H,421,Cooling,14,72,12:28,14:00,E,T2,A,T1,
+12/10/2021,10:30,B1,422,Control,10.4,69,,,F,T2,D,T1,
+12/10/2021,16:00,X1,423,Heating,12.1,65,16:36,17:33,A,T2,E,T1,
+18/10/2021,11:05,H1,424,Heating,11.3,68,12:54,14:00,G,T2,F,T1,
+18/10/2021,11:10,B1,425,Control,9.6,62,,,A,T2,E,T1,
+18/10/2021,11:29,I,426,Cooling,10.3,62,13:54,15:02,E,T2,A,T1,Big move
+18/10/2021,10:52,B1,427,Control,11.2,67,,,D,T2,B,T1,
+18/10/2021,11:34,A,428,Heating,9.1,62,16:14,17:20,F,T2,E,T1,started temp log late
+18/10/2021,11:15,K1,429,Heating,10.1,62,14:35,15:36,G,T2,F,T1,went back in for 7min
+18/10/2021,10:18,M1,430,Cooling,12.3,67,13:18,14:31,D,T2,B,T1,
+18/10/2021,11:07,X1,431,Cooling,8.8,64,15:03,16:29,B,T2,D,T1,
+19/10/2021,10:30,G1,432,Cooling,10.4,65,12:45,13:47,D,T2,B,T1,
+19/10/2021,11:11,Q1,433,Cooling,13.8,71,12:45,14:02,E,T2,F,T1,
+19/10/2021,11:15,B1,434,Control,12.6,68,,,C,T2,H,T1,
+19/10/2021,11:31,I,435,Cooling,12,64,14:30,15:47,F,T2,E,T1,
+19/10/2021,11:10,J,436,Heating,13.2,65,14:09,15:15,B,T2,D,T1,move @~700
+19/10/2021,11:33,A,437,Control,11.4,67,,,H,T2,C,T1,lateish start
+19/10/2021,10:20,M1,438,Control,11.7,68,,,G,T2,B,T1,
+19/10/2021,11:58,X1,439,Heating,8.7,60,15:25,16:28,H,T2,C,T1,started temp ~1min late

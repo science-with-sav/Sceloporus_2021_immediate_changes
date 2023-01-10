@@ -1,0 +1,258 @@
+---
+title: "HOBO Data Logger Climate Treatment Summary"
+author: "Savannah Weaver, Calvin Davis"
+date: "2022"
+output: pdf_document
+toc: TRUE
+---
+
+# Packages
+
+```{r setup, echo=T, results='hide', message=FALSE}
+`%nin%` = Negate(`%in%`)
+if (!require("tidyverse")) install.packages("tidyverse") 
+library("tidyverse")
+```
+
+
+# Load in Data
+
+This data was collected using Onset HOBO temperature and humidity dataloggers during the course of our heating/cooling CEWL experiment. See __ for full details. 
+
+The data is in a separate file for each download for each logger, so I need to compile each of those into one dataset. 
+
+To do this, first I compile a list of the filenames I need to read-in.
+
+## File Names
+
+```{r filenames}
+# make a list of file names of all data to load in
+filenames <- list.files(path = "Data/HOBO data", pattern = ".csv")
+```
+
+Next, I make a function that will read in the data from each csv, name and organize the data correctly. 
+
+
+## Function
+
+```{r create read_HOBO_files function to get each csv data}
+# make a function to read in data from each csv file and add correct identifiers
+read_HOBO_files <- function(filename) {
+  
+  # edit the filename inputted to funtion
+  # to make a unique identifier for each logger
+  name <- substr(filename, 8, 15)
+  # read in the csv file for this given filename
+  dat <- read.csv(file.path("./Data/HOBO data", filename),
+                # each csv has headers
+                header = TRUE,
+                # this is what I want to rename the col headers
+                col.names = c("order", "date_time_PST", "temp_C", 
+                              "relative_humidity", "dew_pt_C", 
+                              # the 6,7,8th cols are not data
+                              # logger use info we don't need
+                              "mostly_blank", "mostly_blank", "mostly_blank")
+                ) %>%
+    # select only the cols with data we want
+    # don't need order- just an arbitrary observation identifier
+    # don't need "mostly_blank" cols- unnecessary logger use info
+    # but get the rest of the cols with informative data
+    dplyr::select(date_time_PST, temp_C, relative_humidity, dew_pt_C) %>%
+    # add a column with the name of the HOBO the data is from 
+    dplyr::mutate(HOBO_serial_number = name)
+  
+  # return the dataframe for that single csv file
+  dat
+}
+```
+
+
+
+## Apply
+
+Finally, I apply the function I made to all of the filenames I compiled, then put all of those dataframes into one dataframe for my analyses.
+
+This will print warnings saying that header and col.names are different lengths, because the data has extra notes on logger usage that we read-in, but get rid of.
+
+```{r apply read_HOBO_files function}
+# apply function to get data from all csvs
+all_HOBO_data <- lapply(filenames, read_HOBO_files) %>%
+  # paste all data files together into one df by row
+  reduce(rbind) %>% 
+  mutate(date = as.Date(substr(date_time_PST, 1, 10), format = "%m/%d/%Y"),
+         date_time_PST = as.POSIXct(date_time_PST, 
+                                    format = "%m/%d/%Y %H:%M:%S")) %>%
+  # remove missing data
+  dplyr::filter(complete.cases(date_time_PST, relative_humidity)) %>%
+  mutate(HOBO_serial_number = str_trim(HOBO_serial_number), # remove trailing white space
+         HOBO_serial_number = str_replace_all(HOBO_serial_number, "[^A-z0-9]", "_"), # replace any special characters with underscores
+         HOBO_serial_number = as.factor(HOBO_serial_number), # set class as factor
+         temp_C = as.numeric(temp_C),
+         relative_humidity = as.numeric(relative_humidity),
+         dew_pt_C = as.numeric(dew_pt_C)
+         )
+summary(all_HOBO_data)
+head(all_HOBO_data)
+```
+
+
+## Check Data
+
+
+```{r histograms}
+hist(all_HOBO_data$temp_C)
+hist(all_HOBO_data$relative_humidity)
+```
+
+
+## Attach Treatment Info
+
+
+```{r tmt assignments}
+# load HOBO assignment data
+HOBO_tmts <- read.csv("./Data/HOBO_assignments.csv") %>%
+           mutate(date = as.Date(date, format = "%d/%m/%Y"),
+                  treatment = as.factor(treatment),
+                  HOBO_serial_number = str_trim(serial),
+                  HOBO_serial_number = str_replace_all(HOBO_serial_number,
+                                              "[^A-z0-9]", "_"),
+                  HOBO_serial_number = as.factor(HOBO_serial_number)) 
+# combine & summarize again
+format_HOBO_data <- all_HOBO_data %>% 
+  left_join(HOBO_tmts, by = c("date", "HOBO_serial_number")) %>%
+  dplyr::select(-serial, -trial)
+summary(format_HOBO_data)
+```
+
+
+
+
+
+
+
+# Statistics
+
+
+## Logger Means
+
+```{r logger means}
+logger_means <- format_HOBO_data %>%
+  group_by(date, treatment, HOBO_serial_number) %>%
+  summarise(temp_mean = mean(temp_C),
+            temp_SD = sd(temp_C),
+            humidity_mean = mean(relative_humidity),
+            humidity_SD = sd(relative_humidity)) %>%
+  arrange(treatment)
+logger_means
+```
+
+
+## Treatment Means
+
+```{r tmt means}
+tmt_means <- format_HOBO_data %>% 
+  group_by(treatment) %>%
+  summarise(temp_mean = mean(temp_C),
+            temp_SD = sd(temp_C),
+            humidity_mean = mean(relative_humidity),
+            humidity_SD = sd(relative_humidity))
+tmt_means
+write.csv(tmt_means, "./Results_Statistics/HOBO_climate_means_by_treatment.csv")
+```
+
+
+
+## Models
+
+Run linear models with pairwise post-hoc tests to determine when and how much climate varied among treatments and dates.
+
+```{r models}
+# temperature
+temp_mod <- lm(data = format_HOBO_data, 
+               temp_C ~ treatment * as.factor(date))
+a_temp_mod <- aov(temp_mod)
+ph_temp_mod <- TukeyHSD(a_temp_mod)
+temp_mod_df <- data.frame(broom::tidy(ph_temp_mod)) %>%
+  arrange(desc(term, adj.p.value))
+write.csv(temp_mod_df, "./Results_Statistics/HOBO_temp_pairwise_diffs.csv")
+
+# humidity
+humidity_mod <- lm(data = format_HOBO_data, 
+                   relative_humidity ~ treatment * as.factor(date))
+a_humid_mod <- aov(humidity_mod)
+ph_humid_mod <- TukeyHSD(a_humid_mod)
+humid_mod_df <- data.frame(broom::tidy(ph_humid_mod)) %>%
+  arrange(desc(term, adj.p.value))
+write.csv(humid_mod_df,
+          "./Results_Statistics/HOBO_humidity_pairwise_diffs.csv")
+```
+
+
+
+
+## Boxplots
+
+Simple plots looking at the distribution of temperature and humidity for each treatment group:
+
+```{r boxplots by tmt}
+ggplot(format_HOBO_data) +
+  geom_boxplot(aes(x = treatment,
+                   y = temp_C,
+                   fill = treatment)) +
+  theme_classic()
+ggplot(format_HOBO_data) +
+  geom_boxplot(aes(x = treatment,
+                   y = relative_humidity,
+                   fill = treatment)) +
+  theme_classic()
+```
+
+
+and by treatment group * date:
+
+```{r boxplots by tmt and date}
+ggplot(format_HOBO_data) +
+  geom_boxplot(aes(x = treatment,
+                   y = temp_C,
+                   fill = treatment)) +
+  theme_classic() +
+  facet_wrap(~date)
+ggplot(format_HOBO_data) +
+  geom_boxplot(aes(x = treatment,
+                   y = relative_humidity,
+                   fill = treatment)) +
+  theme_classic()+
+  facet_wrap(~date)
+```
+
+
+
+# For the Paper
+
+## Re-Print
+
+```{r stats to present}
+# tmt means calculated with arithmetic (vs models)
+tmt_means
+# average temperatures by treatment
+coefficients(temp_mod)[1:3]
+# statistical differences in temp by tmt
+temp_mod_df %>% dplyr::filter(term == "treatment")
+# average humidity by treatment
+coefficients(humidity_mod)[1:3]
+# statistical differences in humidity by tmt
+humid_mod_df %>% dplyr::filter(term == "treatment")
+```
+
+
+## Statement
+
+We maintained temperatures of 13.7 +/- 2.1 for the cold primary acclimation, 24.4 +/- 0.5 for control, and 37.3 +/- 2.0 for hot. However, relative humidity was not consistent among primary acclimation treatments (33% for control but only 9% and 11% for cold and hot, respectively), a difference that was significantly different in a Tukey HSD ANOVA post-hoc test. Primary acclimation climate also occassionally varied among sampling dates: [listred and yellow pairwise diffs (Results_stats csvs) here]; b; c; d.
+
+
+
+
+
+
+
+

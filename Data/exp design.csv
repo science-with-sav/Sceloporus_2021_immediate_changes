@@ -1,0 +1,13 @@
+﻿time_min,temp_C,treatment
+0,25,Heating
+60,15,Heating
+65,15,Heating
+80,30,Heating
+0,25,Cooling
+60,35,Cooling
+65,35,Cooling
+80,20,Cooling
+0,25,Control
+60,25,Control
+65,25,Control
+80,25,Control
