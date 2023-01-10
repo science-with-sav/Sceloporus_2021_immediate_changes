@@ -28,13 +28,12 @@ The **"Data" folder** includes the following:
 
 See .Rmd files for source code, and .html files for a step-by-step explanation in a cleaner format.
 
-**"data_analysis"** includes model building/selection and figure creation. 
+What each file does:
 
-**"data_wrangling"** loads in all the data, removes errors, properly formats everything, exports cleaner dataframes for use in "data_analysis", and calculates some summary statistics. 
-
-**"dead_lizards"** has all summary statistics and figures for the dead lizards opportunistically studied.
-
-**"HOBO_stats"** loads in all the HOBO logger data, selects the data collected during the study, and calculates summary statistics.
+- **"data_analysis"** includes model building/selection and figure creation. 
+- **"data_wrangling"** loads in all the data, removes errors, properly formats everything, exports cleaner dataframes for use in "data_analysis", and calculates some summary statistics. 
+- **"dead_lizards"** has all summary statistics and figures for the dead lizards opportunistically studied.
+- **"HOBO_stats"** loads in all the HOBO logger data, selects the data collected during the study, and calculates summary statistics.
 
 
 ## Results
