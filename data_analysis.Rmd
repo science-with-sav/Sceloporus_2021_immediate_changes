@@ -436,23 +436,10 @@ emmean_ps
 ## COLOR
 
 ```{r}
-cool  <- c(brewer.pal(11, "RdYlBu")[c(10)])
-heat  <- c(brewer.pal(11, "RdYlBu")[c(1)])
-control  <- c(brewer.pal(11, "RdGy")[c(8)])
-controlbox  <- c(brewer.pal(11, "RdGy")[c(9)])
+cool <- c(brewer.pal(11, "RdBu")[c(11)])
+heat <- c(brewer.pal(11, "RdBu")[c(2)])
+control <- c(brewer.pal(9, "Greys")[c(5)])
 cntrls <- c(brewer.pal(9, "Greys")[c(3,6,9,4,7,3,5,8,4,6,9)])
-```
-
-
-Lots of these are just here so we have access to them if we want, not because they are necessarily going to be included in the final manuscript.
-
-relevel factors for figures only
-
-```{r}
-CEWL_time_series$treatment <- factor(CEWL_time_series$treatment,
-                                     levels = c("Heating", "Cooling", "Control"))
-temp_time_series$treatment <- factor(temp_time_series$treatment,
-                                     levels = c("Heating", "Cooling", "Control"))
 ```
 
 
@@ -533,14 +520,10 @@ CEWL_time
 
 
 
-*we may want to use a nonlinear model*
-
-
-
 ## legend
 
 ```{r make a fancy legend}
-ggplot(predict_vals_df) +
+ggplot(temp_time_series) +
    
    geom_smooth(aes(x = (calibrated_cloacal_temp), 
        y = CEWL_g_m2h,
@@ -551,7 +534,6 @@ ggplot(predict_vals_df) +
                se = F) +
   geom_point(aes(x = (calibrated_cloacal_temp), 
        y = CEWL_g_m2h,
-       #color = treatment,
        fill = treatment,
        shape = treatment),
        size = 4, 
@@ -572,7 +554,7 @@ ggplot(predict_vals_df) +
                                  size = 12),
         legend.position = c(0.5,0.5)) +
   scale_shape_manual(values = c(21,25,24),
-                     name = "Treatment") + 
+                     name = "Treatment") +
    scale_fill_manual(values = c("Control" = control,
                                    "Cooling" = cool,  
                                      "Heating" = heat),
@@ -582,42 +564,28 @@ ggplot(predict_vals_df) +
                                      "Heating" = heat),
                       name = "Treatment")  -> fancy_legend
   
-fancy_legend
   
-# MUST CHANGE COMMENTS ABOVE to produce this
-LEGEND <- as_ggplot(get_legend(fancy_legend))
+fancy_legend
+LEGEND <- as_ggplot(get_legend(fancy_legend)) 
 
-#ggsave(filename = "legend_only.pdf",
- #      plot = LEGEND,
-  #     path = "./Results_Figures",
-   #    device = "pdf",
-    #   dpi = 600,
-     #  units = "mm",
-      # width = 30, height = 30)
+# save for using in arranged multi-plots
+ggsave(filename = "legend_only.pdf",
+       plot = LEGEND,
+       path = "./Results_Figures",
+       device = "pdf",
+       dpi = 600,
+       units = "mm",
+       width = 40, height = 30)
 ```
 
 
 
 ## CEWL (raw) ~ cloacal temperature
 
-*manuscript*
-
 ```{r CEWL cloacal temp}
-predict_vals_df %>%
-  dplyr::filter(complete.cases(calibrated_cloacal_temp, CEWL_g_m2h)) %>%
-  group_by(lizard_ID) %>%
-  summarise(max(CEWL_g_m2h)) %>%
-  nrow()
-
-ggplot(predict_vals_df) +
+ggplot(temp_time_series) +
    geom_point(aes(x = (calibrated_cloacal_temp), 
        y = CEWL_g_m2h,
-       shape = treatment,
-       color = treatment),
-       size = 0.01, 
-               alpha = 0.05) +
-   geom_point(aes(x = (calibrated_cloacal_temp), 
-       y = mod_predicts,
        shape = treatment,
        color = treatment),
        size = 0.01, 
@@ -627,10 +595,8 @@ ggplot(predict_vals_df) +
        color = treatment),
        method = "lm", 
         formula = y ~ poly(x, 2),
-               size = 2, 
+               size = 1.5, 
                se = F) +
-  
-   #ylim(0,32) +
   scale_x_continuous(limits = c(12.5, 40),
                      breaks = c(seq(15, 35, 5)),
                      labels = c(seq(15, 35, 5))) +
@@ -644,23 +610,21 @@ ggplot(predict_vals_df) +
   # annotations for cooling group
    annotate(geom = "point", x = 14.3, y = 5, 
            size = 4, pch = 25, fill = cool) + 
-  annotate("text", x = 12.8, y = 5, label = "T[15]", parse = T,
+   annotate("text", x = 12.6, y = 5, label = "T[15]", parse = T,
            size = 5, family = "sans", color = cool) +
-  
    annotate(geom = "point", x = 35.2, y = 11.8, 
            size = 4, pch = 25, fill = cool) + 
-  annotate("text", x = 36.4, y = 11.8, label = "T[1]", parse = T,
+   annotate("text", x = 36.7, y = 11.8, label = "T[1]", parse = T,
            size = 5, family = "sans", color = cool) +
   
   # annotations for heating group
    annotate(geom = "point", x = 15.9, y = 14, 
            size = 4, pch = 24, fill = heat) +  
-  annotate("text", x = 14.7, y = 14, label = "T[1]", parse = T,
+   annotate("text", x = 14.3, y = 14, label = "T[1]", parse = T,
            size = 5, family = "sans", color = heat) +
-  
    annotate(geom = "point", x = 38.3, y = 25.2, 
            size = 4, pch = 24, fill = heat) +
-   annotate("text", x = 39.8, y = 25.2, label = "T[15]", parse = T,
+   annotate("text", x = 40, y = 25.2, label = "T[15]", parse = T,
            size = 5, family = "sans", color = heat) +
    
    theme_classic() +
@@ -675,7 +639,6 @@ ggplot(predict_vals_df) +
                                  size = 12),
         #legend.text.align = 0,
         legend.position = "none",
-        #legend.position = c(0.9, 0.1),
         plot.margin = margin(t = 6, r = 6, b = 6, l = 6, unit = "pt")) +
   
    scale_color_manual(values = c("Control" = control,
@@ -689,12 +652,22 @@ ggplot(predict_vals_df) +
         y = bquote('CEWL (g/'*m^2*'h)'), 
         se = FALSE) -> CEWL_ctemp
 CEWL_ctemp
+
+# save
+ggsave(filename = "CEWL_int_body_temp.pdf",
+       plot = CEWL_ctemp,
+       path = "./Results_Figures",
+       device = "pdf",
+       dpi = 600,
+       units = "mm",
+       width = 150, height = 100)
 ```
 
 
 ## CEWL Control
 
 ```{r CEWL ~ CONTRL temp by individual}
+# get control data only
 temp_time_series %>%
   dplyr::filter(treatment == "Control") %>%
   dplyr::filter(complete.cases(calibrated_cloacal_temp, CEWL_g_m2h)) %>%
@@ -702,6 +675,7 @@ temp_time_series %>%
   summarise(max(CEWL_g_m2h)) %>%
   nrow()
 
+# plot control data only
 temp_time_series %>%
   dplyr::filter(treatment == "Control") %>%
   ggplot() +
@@ -729,9 +703,8 @@ temp_time_series %>%
                                  family = "sans", 
                                  size = 10),
         legend.text.align = 0,
-        legend.position = "none") +
-  
-  #scale_color_brewer(palette = "Greys") +
+        legend.position = "none",
+        plot.margin = margin(t = 6, r = 6, b = 6, l = 10, unit = "pt")) +
   
    scale_color_manual(values = cntrls) +
   
@@ -740,41 +713,26 @@ temp_time_series %>%
         color = "Treatment", 
         se = FALSE) -> CEWL_control
 CEWL_control
+
+# save
+ggsave(filename = "CEWL_temp_control_lm.pdf",
+       plot = CEWL_control,
+       path = "./Results_Figures",
+       device = "pdf",
+       dpi = 600,
+       units = "mm",
+       width = 80, height = 60)
 ```
 
 
 
-## CEWL (raw) ~ dorsal temperature
 
-```{r CEWL dorsal temp}
-ggplot(temp_time_series) +
-   aes(x = calibrated_dorsal_temp, 
-       y = CEWL_g_m2h,
-       color = treatment) +
-   geom_point(size = 0.01, 
-              alpha = 0.2) +
-   geom_smooth(method = "loess", 
-               size = 2, 
-               se = F) +
-   theme_classic() +
-   theme(text = element_text(size = 15)) + 
-   theme(axis.text.x = element_text(size = 10)) +
-   scale_color_manual(values = c("Control" = control,
-                                     "Cooling" = cool,  
-                                     "Heating" = heat)) +
-   labs(x = "Surface Body Temperature (°C)" , 
-        y = bquote('CEWL (g/'*m^2*'h)'), 
-        color = "Treatment", 
-        se = FALSE) -> CEWL_dtemp
-CEWL_dtemp
-```
 
 
 
 
 ## CEWL (relative) ~ time
 
-*manuscript*
 
 ```{r relative CEWL time}
 # n lizards
@@ -786,7 +744,6 @@ CEWL_time_series %>%
 
 # plot
 ggplot() +
-   
    geom_point(data = CEWL_time_series,
               aes(x= time_min, 
                   y = relative_CEWL,
@@ -804,7 +761,7 @@ ggplot() +
                    color = treatment),
                method = "lm", 
                formula = y ~ poly((x), 2),
-               size = 1, 
+               size = 1.5, 
                se = F) +
    
    theme_classic() +
@@ -827,7 +784,7 @@ ggplot() +
                       name = "Treatment") +
   
   annotate(geom = "point", x = 15, y = -3.9, 
-           size = 5, pch = 21, fill = control) +
+           size = 4, pch = 21, fill = control) +
    annotate(geom = "point", x = 15, y = -7.5, 
            size = 4, pch = 25, fill = cool) + 
    annotate(geom = "point", x = 15, y = 3, 
@@ -839,96 +796,19 @@ ggplot() +
         y = bquote('Relative CEWL (g/'*m^2*'h)')) -> CEWLr_time
   
 CEWLr_time
+
+# save
+ggsave(filename = "CEWL_relative_time.pdf",
+       plot = CEWLr_time,
+       path = "./Results_Figures",
+       device = "pdf",
+       dpi = 600,
+       units = "mm",
+       width = 150, height = 100)
 ```
 
 
 
-## CEWL (relative) ~ cloacal temperature
-
-```{r r CEWL cloacal temp}
-ggplot(temp_time_series) +
-   aes(x = calibrated_cloacal_temp, 
-       y = relative_CEWL,
-       color = treatment) +
-  
-   geom_point(size = 0.01, 
-              alpha = 0.2) +
-   geom_smooth(method = "loess", 
-               size = 2, 
-               se = F) +
-  
-   theme_classic() +
-   theme(text = element_text(color = "black", 
-                            family = "sans", 
-                            size = 22),
-        axis.text = element_text(color = "black", 
-                                 family = "sans", 
-                                 size = 16),
-        legend.text = element_text(color = "black", 
-                                 family = "sans", 
-                                 size = 22),
-        legend.text.align = 0,
-        legend.position = "right") + 
-  
-   scale_color_manual(values = c("Control" = control,
-                                     "Cooling" = cool,  
-                                     "Heating" = heat)) +
-  
-   labs(x = "Internal Body Temperature (°C)" , 
-        y = bquote('Relative CEWL (g/'*m^2*'h)'), 
-        color = "Treatment", 
-        se = FALSE) -> CEWLr_ctemp
-CEWLr_ctemp
-```
-
-
-
-## CEWL (relative) ~ dorsal temperature
-
-```{r r CEWL dorsal temp}
-ggplot(temp_time_series) +
-   aes(x = calibrated_dorsal_temp, 
-       y = relative_CEWL,
-       color = treatment) +
-   geom_point(size = 0.01, 
-              alpha = 0.2) +
-   geom_smooth(method = "loess", 
-               size = 2, 
-               se = F) +
-   theme_classic() +
-   theme(text = element_text(size = 15,
-                             family = "sans")) + 
-   theme(axis.text.x = element_text(size = 10)) +
-   scale_color_manual(values = c("Control" = control,
-                                     "Cooling" = cool,  
-                                     "Heating" = heat)) +
-   labs(x = "Surface Body Temperature (°C)" , 
-        y = bquote('Relative CEWL (g/'*m^2*'h)'), 
-        color = "Treatment", 
-        se = FALSE) -> CEWLr_dtemp
-CEWLr_dtemp
-```
-
-
-
-## CEWL Compare
-
-```{r fig arrange}
-ggarrange(CEWL_time, CEWLr_time,
-          CEWL_ctemp, CEWLr_ctemp,
-          CEWL_dtemp, CEWLr_dtemp,
-          ncol = 2, nrow = 3,
-          legend = "none"
-          ) -> CEWL_multi_fig
-CEWL_multi_fig
-# export figure
-#ggsave(filename = "CEWL_multi_fig.jpeg",
- #      plot = CEWL_multi_fig,
-  #     path = "./Results_Figures",
-   #    device = "jpeg",
-    #   dpi = 1200,
-     #  width = 12, height = 13)
-```
 
 
 
@@ -944,7 +824,7 @@ ggplot() +
                    shape = treatment,
                    color = treatment,
                    fill = treatment),
-                   size = 0.7,
+                   size = 0.8,
                alpha = 0.3,
               position = position_jitter(height = 0, width = 0.2)) +
   geom_errorbar(data = emmeans,
@@ -959,11 +839,10 @@ ggplot() +
   geom_point(data = emmeans, 
              aes(x = treatment,
                    y = emmean, 
-                   #color = treatment,
                  shape = treatment,
                  fill = treatment), 
-             color = "black",
-               size = 4) +
+              color = "black",
+              size = 4) +
    theme_classic() +
    theme(text = element_text(color = "black", 
                             family = "sans", 
@@ -976,10 +855,10 @@ ggplot() +
                                  size = 12),
         legend.position = "none") +
   
-   scale_color_manual(values = c("Control" = controlbox,
+   scale_color_manual(values = c("Control" = control,
                                      "Cooling" = cool,  
                                      "Heating" = heat)) +
-  scale_fill_manual(values = c("Control" = controlbox,
+  scale_fill_manual(values = c("Control" = control,
                                      "Cooling" = cool,  
                                      "Heating" = heat)) +
   
@@ -997,12 +876,21 @@ ggplot() +
         y = expression(Delta ~ 'CEWL '*min^-1*''),
         color = "Treatment") -> rate_change_CEWL_fig
 rate_change_CEWL_fig
+
+# save
+ggsave(filename = "CEWL_change_min.pdf",
+       plot = rate_change_CEWL_fig,
+       path = "./Results_Figures",
+       device = "pdf",
+       dpi = 600,
+       units = "mm",
+       width = 80, height = 60)
 ```
 
 
 ## Experimental Design Skematic
 
-```{r get exp design number code}
+```{r load exp design values}
 exp_design <- read.csv("./Data/exp design.csv", 
                             header = TRUE,
                             fileEncoding="UTF-8-BOM")
@@ -1052,7 +940,7 @@ ggplot(exp_design) +
         color = "Treatment") +
    
     annotate(geom = "point", x = 80, y = 25, 
-           size = 3, pch = 21, fill = controlbox) +
+           size = 3, pch = 21, fill = control) +
    annotate(geom = "point", x = 80, y = 20, 
            size = 3, pch = 25, fill = cool) + 
    annotate(geom = "point", x = 80, y = 30, 
@@ -1062,13 +950,7 @@ ggplot(exp_design) +
                       breaks=seq(15, 35, 5)) -> methods_schmatic_fig
 methods_schmatic_fig
 
-```
- 
-
-# Save Grouped Figures
-
-### Methods Schematic
-```{r}
+# save
 ggsave(filename = "methods_schematic.pdf",
        plot = methods_schmatic_fig,
        path = "./Results_Figures",
@@ -1077,91 +959,53 @@ ggsave(filename = "methods_schematic.pdf",
        units = "mm",
        width = 80, height = 60)
 ```
+ 
 
-### Relative CEWL ~ Time
+# Save Grouped Figures
+
+
+## Relative CEWL & Rate of Change
+
 ```{r}
-# standalone
-ggsave(filename = "CEWL_relative_time.pdf",
-       plot = CEWLr_time,
-       path = "./Results_Figures",
-       device = "pdf",
-       dpi = 600,
-       units = "mm",
-       width = 150, height = 100)
-
-
-# grouped figure
-test_relative <- ggarrange(CEWLr_time, 
-          ggarrange(LEGEND, rate_change_CEWL_fig,
+multi_fig_relative <- ggarrange(CEWLr_time, 
+          ggarrange(rate_change_CEWL_fig, LEGEND, 
                     nrow = 1, ncol = 2,
-                    widths = c(1,2),
+                    widths = c(2,1),
                     align = "hv"
                     ),
           nrow = 2, ncol = 1,
-          heights = c(2,1))
-test_relative
+          heights = c(2,1),
+          labels = c("A", "B"))
+multi_fig_relative
 
-#ggsave(filename = "Fig1_condensed.pdf",
- #      plot = test_relative,
-  #     path = "./Results_Figures",
-   #    device = "pdf",
-    #   dpi = 600,
-     #  units = "mm",
-      # width = 150, height = 150) # full width = 180
-```
-
-### Raw CEWL ~ Cloacal temp
-```{r}
-# standalone
-ggsave(filename = "CEWL_int_body_temp.pdf",
-       plot = CEWL_ctemp,
+ggsave(filename = "CEWL_time_multi_fig.pdf",
+       plot = multi_fig_relative,
        path = "./Results_Figures",
        device = "pdf",
        dpi = 600,
        units = "mm",
-       width = 150, height = 100)
+       width = 120, height = 160) # full width = 180
+```
 
-# grouped figure
-CEWL_by_temp_arrange <- ggarrange(CEWL_ctemp, 
-                  ggarrange(LEGEND, CEWL_control,
+## Raw CEWL ~ Cloacal temp & control zoom-in
+
+```{r}
+multi_fig_CEWL_by_temp <- ggarrange(CEWL_ctemp, 
+                  ggarrange(CEWL_control, LEGEND, 
                             nrow = 1, ncol = 2,
-                            widths = c(1,2),
+                            widths = c(2, 1),
                             align = "hv"
                             ),
                   nrow = 2, ncol = 1,
-                  heights = c(2,1))
-CEWL_by_temp_arrange
+                  heights = c(2,1),
+          labels = c("A", "B"))
+multi_fig_CEWL_by_temp
 
-
-#ggsave(filename = "Fig2_condensed.pdf",
- #      plot = CEWL_by_temp_arrange,
-  #     path = "./Results_Figures",
-   #    device = "pdf",
-    #   dpi = 600,
-     #  units = "mm",
-      # width = 150, height = 150)
-```
-
-### Rate of Change
-```{r}
-ggsave(filename = "CEWL_change_min.pdf",
-       plot = rate_change_CEWL_fig,
+ggsave(filename = "CEWL_temp_multi_fig.pdf",
+       plot = multi_fig_CEWL_by_temp,
        path = "./Results_Figures",
        device = "pdf",
        dpi = 600,
        units = "mm",
-       width = 80, height = 60)
+       width = 120, height = 160)
 ```
-
-### Control Individuals
-```{r}
-ggsave(filename = "CEWL_temp_control_lm.pdf",
-       plot = CEWL_control,
-       path = "./Results_Figures",
-       device = "pdf",
-       dpi = 600,
-       units = "mm",
-       width = 80, height = 60)
-```
-
-

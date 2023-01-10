@@ -2,14 +2,17 @@
 title: "HOBO Data Logger Climate Treatment Summary"
 author: "Savannah Weaver, Calvin Davis"
 date: "2022"
-output: pdf_document
-toc: TRUE
+output: 
+  rmdformats::html_clean:
+    highlight: tango
+    thumbnails: FALSE
+    toc: TRUE
+    toc_depth: 3
 ---
 
 # Packages
 
 ```{r setup, echo=T, results='hide', message=FALSE}
-`%nin%` = Negate(`%in%`)
 if (!require("tidyverse")) install.packages("tidyverse") 
 library("tidyverse")
 ```
@@ -149,13 +152,18 @@ logger_means
 
 ## Treatment Means
 
+**These values are for the primary temperature treatment in the incubation chambers, before the CEWL time series measurements.**
+
 ```{r tmt means}
 tmt_means <- format_HOBO_data %>% 
   group_by(treatment) %>%
   summarise(temp_mean = mean(temp_C),
             temp_SD = sd(temp_C),
             humidity_mean = mean(relative_humidity),
-            humidity_SD = sd(relative_humidity))
+            humidity_SD = sd(relative_humidity)) %>%
+  # calculate VPD, based on Campbell & Normal 1998
+  mutate(e_s_kPa = 0.611 * exp((17.502*temp_mean)/(temp_mean + 240.97)),
+         VPD_kPa = e_s_kPa*(1 - (humidity_mean/100)))
 tmt_means
 write.csv(tmt_means, "./Results_Statistics/HOBO_climate_means_by_treatment.csv")
 ```
@@ -242,12 +250,13 @@ temp_mod_df %>% dplyr::filter(term == "treatment")
 coefficients(humidity_mod)[1:3]
 # statistical differences in humidity by tmt
 humid_mod_df %>% dplyr::filter(term == "treatment")
+tmt_means
 ```
 
 
 ## Statement
 
-We maintained temperatures of 13.7 +/- 2.1 for the cold primary acclimation, 24.4 +/- 0.5 for control, and 37.3 +/- 2.0 for hot. However, relative humidity was not consistent among primary acclimation treatments (33% for control but only 9% and 11% for cold and hot, respectively), a difference that was significantly different in a Tukey HSD ANOVA post-hoc test. Primary acclimation climate also occassionally varied among sampling dates: [listred and yellow pairwise diffs (Results_stats csvs) here]; b; c; d.
+We maintained temperatures of 13.7 +/- 2.1 for the cold primary temperature treatment, 24.4 +/- 0.5 for control, and 37.3 +/- 2.0 for hot. However, relative humidity was not consistent among primary incubation temperature treatments (33% for control but only 9% and 11% for cold and hot, respectively), a difference that was significantly different in a Tukey HSD ANOVA post-hoc test. VPD during the primary incubation temperature treatments was ~1.4 for the cold treatment, ~2.0 for control, and ~5.7 for hot.
 
 
 
