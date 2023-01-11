@@ -498,7 +498,7 @@ emmean_ps
 cool <- c(brewer.pal(11, "RdBu")[c(11)])
 heat <- c(brewer.pal(11, "RdBu")[c(2)])
 control <- c(brewer.pal(9, "Greys")[c(5)])
-cntrls <- c(brewer.pal(9, "Greys")[c(3,6,9,4,7,3,5,8,4,6,9)])
+cntrls <- c(brewer.pal(9, "Greys")[c(7, 5, 3, 5, 4, 5, 3, 6, 7, 3, 6)])
 ```
 
 
