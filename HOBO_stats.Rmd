@@ -181,7 +181,7 @@ temp_mod <- lm(data = format_HOBO_data,
 a_temp_mod <- aov(temp_mod)
 ph_temp_mod <- TukeyHSD(a_temp_mod)
 temp_mod_df <- data.frame(broom::tidy(ph_temp_mod)) %>%
-  arrange(desc(term, adj.p.value))
+  arrange(desc(adj.p.value))
 write.csv(temp_mod_df, "./Results_Statistics/HOBO_temp_pairwise_diffs.csv")
 
 # humidity
@@ -190,7 +190,7 @@ humidity_mod <- lm(data = format_HOBO_data,
 a_humid_mod <- aov(humidity_mod)
 ph_humid_mod <- TukeyHSD(a_humid_mod)
 humid_mod_df <- data.frame(broom::tidy(ph_humid_mod)) %>%
-  arrange(desc(term, adj.p.value))
+  arrange(desc(adj.p.value))
 write.csv(humid_mod_df,
           "./Results_Statistics/HOBO_humidity_pairwise_diffs.csv")
 ```

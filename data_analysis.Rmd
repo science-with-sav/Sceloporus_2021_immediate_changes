@@ -144,7 +144,16 @@ anova(CEWL_LMM_04b, CEWL_LMM_03b)
 The logarithmic models are NOT better than the linear or polynomial ones.
 
 
-VIFs are still close to 1 with the polynomial included, and all variables seem significant, so re-run with p-values:
+VIFs are still close to 1 with the polynomial included, and all variables seem significant, so check assumptions:
+
+```{r}
+plot(CEWL_LMM_03a)
+plot(CEWL_LMM_03b)
+```
+
+They both have a really weird spike, but otherwise there's no fanning or different pattern.
+
+Re-run with p-values:
 
 ```{r CEWL LMM best 1}
 CEWL_LMM_besta <- lmerTest::lmer(data = temp_time_series,
@@ -152,31 +161,46 @@ CEWL_LMM_besta <- lmerTest::lmer(data = temp_time_series,
                              poly(calibrated_cloacal_temp, 2) * treatment +
                              (1|date/lizard_ID))
 summary(CEWL_LMM_besta)
+#anova(CEWL_LMM_besta, type = "3", ddf = "Kenward-Roger")
 
 CEWL_LMM_bestb <- lmerTest::lmer(data = temp_time_series,
                           CEWL_g_m2h ~ 
                              poly(calibrated_dorsal_temp, 2) * treatment +
                              (1|date/lizard_ID))
 summary(CEWL_LMM_bestb)
+#anova(CEWL_LMM_bestb, type = "3", ddf = "Kenward-Roger")
+
+# double check sample sizes
+temp_time_series %>%
+  group_by(lizard_ID, treatment) %>%
+  summarise(n()) %>%
+  group_by(treatment) %>%
+  summarise(n())
 ```
 
 These are the best models for CEWL ~ temperature. 
 
-Check model assumptions:
 
-```{r model assump check}
-plot(CEWL_LMM_besta)
-plot(CEWL_LMM_bestb)
-```
-
-They both have a really weird spike, but otherwise there's no fanning or different pattern.
 
 
 ```{r export best CEWL LMM}
-write.csv(broom.mixed::tidy(CEWL_LMM_besta), 
-          "./Results_Statistics/CEWL_best_model_clotemp.csv")
-write.csv(broom.mixed::tidy(CEWL_LMM_bestb), 
-          "./Results_Statistics/CEWL_best_model_dorstemp.csv")
+broom.mixed::tidy(CEWL_LMM_besta) %>%
+  mutate(estimate = round(estimate, digits = 2),
+         std.error = round(std.error, digits = 2),
+         statistic = round(statistic, digits = 2),
+         df = round(df, digits = 0)) %>%
+  dplyr::select(effect, group, term, estimate, 
+                std.error, statistic, df, p.value) %>%
+  write.csv("./Results_Statistics/CEWL_best_model_clotemp.csv")
+
+broom.mixed::tidy(CEWL_LMM_bestb) %>%
+  mutate(estimate = round(estimate, digits = 2),
+         std.error = round(std.error, digits = 2),
+         statistic = round(statistic, digits = 2),
+         df = round(df, digits = 0)) %>%
+  dplyr::select(effect, group, term, estimate, 
+                std.error, statistic, df, p.value) %>%
+  write.csv("./Results_Statistics/CEWL_best_model_dorstemp.csv")
 ```
 
 
@@ -229,6 +253,14 @@ anova(rates_LMM_01, rates_LMM_03)
 
 The polynomial model is best (better than both log and lm options).
 
+Check linear regression assumptions:
+
+```{r}
+plot(rates_LMM_01)
+```
+
+Again, there is a really weird spike, but otherwise there's no fanning or pattern.
+
 re-run with p-values:
 
 ```{r CEWL LMM best 2}
@@ -237,11 +269,27 @@ rates_LMM_best <- lmerTest::lmer(data = CEWL_time_series,
                              poly(time_min, 2) * treatment +
                              (1|date/lizard_ID))
 summary(rates_LMM_best)
+#anova(rates_LMM_best, type = "3", ddf = "Kenward-Roger")
+
+# double check sample sizes
+CEWL_time_series %>%
+  group_by(lizard_ID, treatment) %>%
+  summarise(n()) %>%
+  group_by(treatment) %>%
+  summarise(n())
 ```
 
+Treatment explained some variation, and the effect of time explained most of the variation (F(,) = , p <)
+
 ```{r}
-write.csv(broom.mixed::tidy(rates_LMM_best), 
-          "./Results_Statistics/CEWL_best_model_time.csv")
+broom.mixed::tidy(rates_LMM_best) %>%
+  mutate(estimate = round(estimate, digits = 2),
+         std.error = round(std.error, digits = 2),
+         statistic = round(statistic, digits = 2),
+         df = round(df, digits = 0)) %>%
+  dplyr::select(effect, group, term, estimate, 
+                std.error, statistic, df, p.value) %>%
+  write.csv("./Results_Statistics/CEWL_best_model_time.csv")
 ```
 
 
@@ -402,9 +450,10 @@ change_LMM_4 <- lme4::lmer(data = lizard_coeffs,
 summary(change_LMM_4)
 drop1(change_LMM_4)
 anova(change_LMM_4)
+plot(change_LMM_4)
 ```
 
-The simplest model is our best/final model.
+The simplest model is our best/final model, and assumptions look good.
 
 Save with p-values:
 
@@ -414,9 +463,19 @@ change_LMM_best <- lmerTest::lmer(data = lizard_coeffs,
                              treatment + 
                        (1|date_factor))
 summary(change_LMM_best)
-write.csv(broom.mixed::tidy(change_LMM_best), 
-          "./Results_Statistics/change_CEWL_best_model.csv")
+broom.mixed::tidy(change_LMM_best) %>%
+  mutate(estimate = round(estimate, digits = 2),
+         std.error = round(std.error, digits = 2),
+         statistic = round(statistic, digits = 2),
+         df = round(df, digits = 0)) %>%
+  dplyr::select(effect, group, term, estimate, 
+                std.error, statistic, df, p.value) %>%
+  write.csv("./Results_Statistics/change_CEWL_best_model.csv")
+
+anova(change_LMM_best, type = "3", ddf = "Kenward-Roger")
 ```
+
+Treatment group explained a significant amount of the variation (F(3,30)=18.29, p < 0.0001).
 
 also get pairwise differences for change ~ tmt, which I will use to make the boxplot later:
 
@@ -649,7 +708,7 @@ ggplot(temp_time_series) +
                      name = "Treatment") + 
   
    labs(x = "Internal Body Temperature (°C)" , 
-        y = bquote('CEWL (g/'*m^2*'h)'), 
+        y = bquote('CEWL (g '*m^-2*' '*h^-1*')'), 
         se = FALSE) -> CEWL_ctemp
 CEWL_ctemp
 
@@ -695,21 +754,21 @@ temp_time_series %>%
    theme_classic() +
    theme(text = element_text(color = "black", 
                             family = "sans", 
-                            size = 10),
+                            size = 12),
         axis.text = element_text(color = "black", 
                                  family = "sans", 
-                                 size = 6),
+                                 size = 8),
         legend.text = element_text(color = "black", 
                                  family = "sans", 
-                                 size = 10),
+                                 size = 12),
         legend.text.align = 0,
         legend.position = "none",
-        plot.margin = margin(t = 6, r = 6, b = 6, l = 10, unit = "pt")) +
+        plot.margin = margin(t = 6, r = 6, b = 6, l = 6, unit = "pt")) +
   
    scale_color_manual(values = cntrls) +
   
    labs(x = "Internal Body Temperature (°C)" , 
-        y = bquote('CEWL (g/'*m^2*'h)'), 
+        y = bquote('CEWL (g '*m^-2*' '*h^-1*')'), 
         color = "Treatment", 
         se = FALSE) -> CEWL_control
 CEWL_control
@@ -793,7 +852,7 @@ ggplot() +
                       breaks = seq(1, 15, 2)) +
 
    labs(x = "Time (minutes)" , 
-        y = bquote('Relative CEWL (g/'*m^2*'h)')) -> CEWLr_time
+        y = bquote('CEWL (g '*m^-2*' '*h^-1*')')) -> CEWLr_time
   
 CEWLr_time
 

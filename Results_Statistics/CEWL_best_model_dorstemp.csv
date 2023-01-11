@@ -1,13 +1,13 @@
-"","effect","group","term","estimate","std.error","statistic","df","p.value"
-"1","fixed",NA,"(Intercept)",3.24824857616188,2.33609214441799,1.39046252260359,5.35343241070168,0.21942949297712
-"2","fixed",NA,"poly(calibrated_dorsal_temp, 2)1",1534.6086086154,67.4300751817697,22.7585184278468,25237.5265198307,1.64246215679434e-113
-"3","fixed",NA,"poly(calibrated_dorsal_temp, 2)2",-2711.18541597923,75.1058015164235,-36.0982156003804,25236.0965548717,2.86986141951546e-278
-"4","fixed",NA,"treatmentCooling",3.52930435127524,1.38640944858496,2.54564360829871,30.6091680656391,0.016169928375371
-"5","fixed",NA,"treatmentHeating",14.34123447709,1.46849051409727,9.76597011653561,30.1736165779232,7.45702190834098e-11
-"6","fixed",NA,"poly(calibrated_dorsal_temp, 2)1:treatmentCooling",-1350.7647213604,67.4565650255137,-20.0242144089239,25237.5232820186,1.65124099407688e-88
-"7","fixed",NA,"poly(calibrated_dorsal_temp, 2)2:treatmentCooling",2852.57657783912,75.1340391025176,37.9665010947553,25236.0956362284,8.69239231695783e-307
-"8","fixed",NA,"poly(calibrated_dorsal_temp, 2)1:treatmentHeating",-1365.96111805098,67.4685058333836,-20.2459073485973,25237.5173828629,2.0191768552848e-90
-"9","fixed",NA,"poly(calibrated_dorsal_temp, 2)2:treatmentHeating",2666.79033401587,75.1413689544043,35.4903080836081,25236.1025066629,2.87287380619861e-269
-"10","ran_pars","lizard_ID:date","sd__(Intercept)",3.16165869958193,NA,NA,NA,NA
-"11","ran_pars","date","sd__(Intercept)",4.68543010661748,NA,NA,NA,NA
-"12","ran_pars","Residual","sd__Observation",1.24641008852636,NA,NA,NA,NA
+,effect,group,term,estimate,std.error,statistic,df,p.value
+1,fixed,NA,(Intercept),3.25,2.34,1.39,5,0.219429493
+2,fixed,NA,"poly(calibrated_dorsal_temp, 2)1",1534.61,67.43,22.76,25238,1.64E-113
+3,fixed,NA,"poly(calibrated_dorsal_temp, 2)2",-2711.19,75.11,-36.1,25236,2.87E-278
+4,fixed,NA,treatmentCooling,3.53,1.39,2.55,31,0.016169928
+5,fixed,NA,treatmentHeating,14.34,1.47,9.77,30,7.46E-11
+6,fixed,NA,"poly(calibrated_dorsal_temp, 2)1:treatmentCooling",-1350.76,67.46,-20.02,25238,1.65E-88
+7,fixed,NA,"poly(calibrated_dorsal_temp, 2)2:treatmentCooling",2852.58,75.13,37.97,25236,8.69E-307
+8,fixed,NA,"poly(calibrated_dorsal_temp, 2)1:treatmentHeating",-1365.96,67.47,-20.25,25238,2.02E-90
+9,fixed,NA,"poly(calibrated_dorsal_temp, 2)2:treatmentHeating",2666.79,75.14,35.49,25236,2.87E-269
+10,ran_pars,lizard_ID:date,sd__(Intercept),3.16,NA,NA,NA,NA
+11,ran_pars,date,sd__(Intercept),4.69,NA,NA,NA,NA
+12,ran_pars,Residual,sd__Observation,1.25,NA,NA,NA,NA

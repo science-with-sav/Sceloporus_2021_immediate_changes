@@ -1,13 +1,13 @@
 "","effect","group","term","estimate","std.error","statistic","df","p.value"
-"1","fixed",NA,"(Intercept)",14.9569792043651,2.09896769537474,7.12587394142563,5.18867315468017,0.000722932921890101
-"2","fixed",NA,"poly(time_min, 2)1",-137.974291386163,2.30861356792904,-59.7650006492572,28362.0242571878,0
-"3","fixed",NA,"poly(time_min, 2)2",51.1003239280745,2.32187991642728,22.0081682805989,28362.0162995851,1.87419585736403e-106
-"4","fixed",NA,"treatmentCooling",-8.47345217736477,1.29694853148477,-6.53337582152489,30.0054405367276,3.16975497425658e-07
-"5","fixed",NA,"treatmentHeating",3.41617395464082,1.28002644633406,2.66883076082107,30.0605372997485,0.0121514199833871
-"6","fixed",NA,"poly(time_min, 2)1:treatmentCooling",-88.8510641014539,3.37593215819679,-26.3189720462015,28362.5705299249,7.55668440265354e-151
-"7","fixed",NA,"poly(time_min, 2)2:treatmentCooling",83.3672760677399,3.33740949077841,24.9796365408836,28362.0834598521,3.02934719149449e-136
-"8","fixed",NA,"poly(time_min, 2)1:treatmentHeating",301.171774582345,3.20083563853307,94.0916087526354,28362.0926447951,0
-"9","fixed",NA,"poly(time_min, 2)2:treatmentHeating",-108.483321542704,3.2007350192081,-33.8932529221191,28362.0484835333,7.09484966103455e-247
-"10","ran_pars","lizard_ID:date","sd__(Intercept)",3.15849932301338,NA,NA,NA,NA
-"11","ran_pars","date","sd__(Intercept)",4.22107226246173,NA,NA,NA,NA
-"12","ran_pars","Residual","sd__Observation",1.32433746222843,NA,NA,NA,NA
+"1","fixed",NA,"(Intercept)",14.96,2.1,7.13,5,0.000722932921890101
+"2","fixed",NA,"poly(time_min, 2)1",-137.97,2.31,-59.77,28362,0
+"3","fixed",NA,"poly(time_min, 2)2",51.1,2.32,22.01,28362,1.87419585736403e-106
+"4","fixed",NA,"treatmentCooling",-8.47,1.3,-6.53,30,3.16975497425658e-07
+"5","fixed",NA,"treatmentHeating",3.42,1.28,2.67,30,0.0121514199833871
+"6","fixed",NA,"poly(time_min, 2)1:treatmentCooling",-88.85,3.38,-26.32,28363,7.55668440265354e-151
+"7","fixed",NA,"poly(time_min, 2)2:treatmentCooling",83.37,3.34,24.98,28362,3.02934719149449e-136
+"8","fixed",NA,"poly(time_min, 2)1:treatmentHeating",301.17,3.2,94.09,28362,0
+"9","fixed",NA,"poly(time_min, 2)2:treatmentHeating",-108.48,3.2,-33.89,28362,7.09484966103455e-247
+"10","ran_pars","lizard_ID:date","sd__(Intercept)",3.16,NA,NA,NA,NA
+"11","ran_pars","date","sd__(Intercept)",4.22,NA,NA,NA,NA
+"12","ran_pars","Residual","sd__Observation",1.32,NA,NA,NA,NA

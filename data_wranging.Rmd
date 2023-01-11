@@ -1210,11 +1210,13 @@ mean_CEWL_temp <- temp_time_series %>%
 heat_CEWL <- mean_CEWL_temp %>%
   dplyr::filter(treatment == "Heating") %>%
   dplyr::select(treatment, rounded_cal_c_temp, heating_mm_CEWL = mean_mean_CEWL)
+write_rds(heat_CEWL, "./Data/CEWL_by_temp_heating_tmt.csv")
 
 # get values for cooling group only
 cool_CEWL <- mean_CEWL_temp %>%
   dplyr::filter(treatment == "Cooling")%>%
   dplyr::select(treatment, rounded_cal_c_temp, cooling_mm_CEWL = mean_mean_CEWL)
+write_rds(cool_CEWL, "./Data/CEWL_by_temp_cooling_tmt.csv")
 
 # calculate the diff between groups at a common temperature
 compare_CEWL <- heat_CEWL %>%
@@ -1223,8 +1225,12 @@ compare_CEWL <- heat_CEWL %>%
   dplyr::filter(complete.cases(diff)) 
 
 # summary stats
-compare_CEWL%>%
-  summarise(mean(diff), sd(diff), max(diff), min(diff))
+compare_CEWL %>%
+  summarise(mean_CEWL_diff = mean(diff), 
+            sd_CEWL_diff = sd(diff), 
+            max_CEWL_diff = max(diff), 
+            min_CEWL_diff = min(diff)) %>%
+  mutate(sem_CEWL_diff = sd_CEWL_diff/sqrt(nrow(compare_CEWL)))
 ```
 
 

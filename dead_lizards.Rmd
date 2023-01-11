@@ -336,26 +336,40 @@ mean_CEWL_temp_dead <- CEWL_time_temp_subset %>%
 mean_CEWL_temp_dead
 
 # compare heating tmt dead vs live
-# note, I use dfs created in the acute changes file
-#heating_compare <- mean_CEWL_temp_dead %>%
- # dplyr::filter(treatment == "heating") %>%
-  #dplyr::select(treatment, rounded_cal_c_temp, heating_mean_CEWL_dead = mean_CEWL) %>%
-#  left_join(heat_CEWL, by = 'rounded_cal_c_temp') %>%
- # mutate(dead_minus_live_diff = heating_mean_CEWL_dead - heating_mm_CEWL)
+# load data from live lizards
+live_heat_CEWL <- read_rds("./Data/CEWL_by_temp_heating_tmt.csv")
 
-#heating_compare %>%
- # summarise(mean(dead_minus_live_diff), sd(dead_minus_live_diff), max(dead_minus_live_diff), min(dead_minus_live_diff))
+# put into one df
+heating_compare <- mean_CEWL_temp_dead %>%
+  dplyr::filter(treatment == "heating") %>%
+  dplyr::select(treatment, 
+                rounded_cal_c_temp, 
+                heating_mean_CEWL_dead = mean_CEWL) %>%
+  left_join(live_heat_CEWL, by = 'rounded_cal_c_temp') %>%
+  mutate(dead_minus_live_diff = heating_mean_CEWL_dead - heating_mm_CEWL)
+
+heating_compare %>%
+  summarise(mean_diff = mean(dead_minus_live_diff), 
+            sd_diff = sd(dead_minus_live_diff), 
+            max_diff = max(dead_minus_live_diff), 
+            min_diff = min(dead_minus_live_diff)) %>%
+  mutate(sem_diff = sd_diff/sqrt(nrow(heating_compare)))
 
 # compare cooling tmt dead vs live
-# note, I use dfs created in the acute changes file
-#cooling_compare <- mean_CEWL_temp_dead %>%
- # dplyr::filter(treatment == "cooling") %>%
-  #dplyr::select(treatment, rounded_cal_c_temp, cooling_mean_CEWL_dead = mean_CEWL) %>%
-#  left_join(cool_CEWL, by = 'rounded_cal_c_temp') %>%
- # mutate(dead_minus_live_diff = cooling_mean_CEWL_dead - cooling_mm_CEWL)
+# load data from live lizards
+live_cool_CEWL <- read_rds("./Data/CEWL_by_temp_cooling_tmt.csv")
+cooling_compare <- mean_CEWL_temp_dead %>%
+  dplyr::filter(treatment == "cooling") %>%
+  dplyr::select(treatment, rounded_cal_c_temp, cooling_mean_CEWL_dead = mean_CEWL) %>%
+  left_join(live_cool_CEWL, by = 'rounded_cal_c_temp') %>%
+  mutate(dead_minus_live_diff = cooling_mean_CEWL_dead - cooling_mm_CEWL)
 
-#cooling_compare %>%
- # summarise(mean(dead_minus_live_diff, na.rm = T), sd(dead_minus_live_diff, na.rm = T), max(dead_minus_live_diff, na.rm = T), min(dead_minus_live_diff, na.rm = T))
+cooling_compare %>%
+  summarise(mean_diff = mean(dead_minus_live_diff, na.rm = T), 
+            sd_diff = sd(dead_minus_live_diff, na.rm = T), 
+            max_diff = max(dead_minus_live_diff, na.rm = T), 
+            min_diff = min(dead_minus_live_diff, na.rm = T)) %>%
+  mutate(sem_diff = sd_diff/sqrt(nrow(cooling_compare)))
 ```
 
 
@@ -425,7 +439,7 @@ ggplot(CEWL_time_temp_subset) +
                       breaks = seq(1, 15, 2)) +
 
    labs(x = "Time (minutes)" , 
-        y = bquote('Relative CEWL (g/'*m^2*'h)')) -> CEWLr_time
+        y = bquote('CEWL (g '*m^-2*' '*h^-1*')')) -> CEWLr_time
   
 CEWLr_time
 ```
@@ -521,7 +535,7 @@ ggplot(CEWL_time_temp_subset) +
                      name = "Treatment") + 
   
    labs(x = "Internal Body Temperature (°C)" , 
-        y = bquote('CEWL (g/'*m^2*'h)'), 
+        y = bquote('CEWL (g '*m^-2*' '*h^-1*')'), 
         se = FALSE) -> CEWL_ctemp
 CEWL_ctemp
 ```

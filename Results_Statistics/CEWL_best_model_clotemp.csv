@@ -1,13 +1,13 @@
 "","effect","group","term","estimate","std.error","statistic","df","p.value"
-"1","fixed",NA,"(Intercept)",0.655680280422228,2.45030159698221,0.267591663503694,5.45495924518178,0.798840091523083
-"2","fixed",NA,"poly(calibrated_cloacal_temp, 2)1",1422.2806581426,62.9113091935018,22.6077103842803,25235.9701825702,4.72423467266947e-112
-"3","fixed",NA,"poly(calibrated_cloacal_temp, 2)2",-3419.18005959745,82.4962819754978,-41.4464746497663,25238.1540040082,0
-"4","fixed",NA,"treatmentCooling",6.69564166733009,1.50103403791756,4.46068609917681,30.3217518949645,0.000104209130040951
-"5","fixed",NA,"treatmentHeating",16.7663632528577,1.58972511331955,10.5467059131043,29.8965066683724,1.35993054052463e-11
-"6","fixed",NA,"poly(calibrated_cloacal_temp, 2)1:treatmentCooling",-1162.0238048956,62.9471238311045,-18.4603161220434,25235.9622069209,1.35640209590359e-75
-"7","fixed",NA,"poly(calibrated_cloacal_temp, 2)2:treatmentCooling",3565.6587488632,82.5284555935381,43.2052038684024,25238.152136925,0
-"8","fixed",NA,"poly(calibrated_cloacal_temp, 2)1:treatmentHeating",-1223.65772802437,62.9509614895253,-19.4382690759693,25235.9530163425,1.49710912078707e-83
-"9","fixed",NA,"poly(calibrated_cloacal_temp, 2)2:treatmentHeating",3338.20549502071,82.525647541139,40.4505216800221,25238.1526459912,0
-"10","ran_pars","lizard_ID:date","sd__(Intercept)",3.43119544379045,NA,NA,NA,NA
-"11","ran_pars","date","sd__(Intercept)",4.87793911843699,NA,NA,NA,NA
-"12","ran_pars","Residual","sd__Observation",1.21178164598217,NA,NA,NA,NA
+"1","fixed",NA,"(Intercept)",0.66,2.45,0.27,5,0.798840091523083
+"2","fixed",NA,"poly(calibrated_cloacal_temp, 2)1",1422.28,62.91,22.61,25236,4.72423467266947e-112
+"3","fixed",NA,"poly(calibrated_cloacal_temp, 2)2",-3419.18,82.5,-41.45,25238,0
+"4","fixed",NA,"treatmentCooling",6.7,1.5,4.46,30,0.000104209130040951
+"5","fixed",NA,"treatmentHeating",16.77,1.59,10.55,30,1.35993054052463e-11
+"6","fixed",NA,"poly(calibrated_cloacal_temp, 2)1:treatmentCooling",-1162.02,62.95,-18.46,25236,1.35640209590359e-75
+"7","fixed",NA,"poly(calibrated_cloacal_temp, 2)2:treatmentCooling",3565.66,82.53,43.21,25238,0
+"8","fixed",NA,"poly(calibrated_cloacal_temp, 2)1:treatmentHeating",-1223.66,62.95,-19.44,25236,1.49710912078707e-83
+"9","fixed",NA,"poly(calibrated_cloacal_temp, 2)2:treatmentHeating",3338.21,82.53,40.45,25238,0
+"10","ran_pars","lizard_ID:date","sd__(Intercept)",3.43,NA,NA,NA,NA
+"11","ran_pars","date","sd__(Intercept)",4.88,NA,NA,NA,NA
+"12","ran_pars","Residual","sd__Observation",1.21,NA,NA,NA,NA
