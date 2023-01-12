@@ -1,5 +1,5 @@
 ---
-title: "HOBO Data Logger Climate Treatment Summary"
+title: "Acute Changes in CEWL as a Function of Temperature: HOBO Data Logger Summary"
 author: "Savannah Weaver, Calvin Davis"
 date: "2022"
 output: 
@@ -17,14 +17,19 @@ if (!require("tidyverse")) install.packages("tidyverse")
 library("tidyverse")
 if (!require("emmeans")) install.packages("emmeans") 
 library("emmeans")
+if (!require("rmdformats")) install.packages("rmdformats")
+library("rmdformats")
 ```
 
+# Background
+
+This code gets summary statistics of the ambient conditions at different stages of a study on the rate of change of cutaneous evaporative water loss (CEWL) in response to temperature change in Western Fence Lizards (*Sceloporus occidentalis*) (**published in the Journal __ in 2023**). Data was collected and analyzed by Calvin Davis and Savannah Weaver, under the advising of Dr. Emily Taylor at California Polytechnic State University.
 
 # Load in Data
 
-This data was collected using Onset HOBO temperature and humidity dataloggers during the course of our heating/cooling CEWL experiment. See __ for full details. 
+This data was collected using Onset HOBO temperature and humidity dataloggers during the course of our heating/cooling CEWL experiment.
 
-The data is in a separate file for each download for each logger, so I need to compile each of those into one dataset. 
+The data is in a separate file for each download for each logger, so I need to compile each of those into one dataset.
 
 To do this, first I compile a list of the filenames I need to read-in.
 
@@ -35,8 +40,7 @@ To do this, first I compile a list of the filenames I need to read-in.
 filenames <- list.files(path = "Data/HOBO data", pattern = ".csv")
 ```
 
-Next, I make a function that will read in the data from each csv, name and organize the data correctly. 
-
+Next, I make a function that will read in the data from each csv, name and organize the data correctly.
 
 ## Function
 
@@ -71,8 +75,6 @@ read_HOBO_files <- function(filename) {
 }
 ```
 
-
-
 ## Apply
 
 Finally, I apply the function I made to all of the filenames I compiled, then put all of those dataframes into one dataframe for my analyses.
@@ -100,18 +102,14 @@ summary(all_HOBO_data)
 head(all_HOBO_data)
 ```
 
-
 ## Check Data
-
 
 ```{r histograms}
 hist(all_HOBO_data$temp_C)
 hist(all_HOBO_data$relative_humidity)
 ```
 
-
 ## Attach Treatment Info
-
 
 ```{r tmt assignments}
 # load HOBO assignment data
@@ -129,14 +127,7 @@ format_HOBO_data <- all_HOBO_data %>%
 summary(format_HOBO_data)
 ```
 
-
-
-
-
-
-
 # Statistics
-
 
 ## Logger Means
 
@@ -150,7 +141,6 @@ logger_means <- format_HOBO_data %>%
   arrange(treatment)
 logger_means
 ```
-
 
 ## Treatment Means + VPD
 
@@ -170,9 +160,9 @@ tmt_means
 write.csv(tmt_means, "./Results_Statistics/HOBO_climate_means_by_treatment.csv")
 ```
 
-
-
 ## Date Differences during Measurement period
+
+We want to know what the VPD was in the lab while we took CEWL measurements, and whether it was different across dates.
 
 ```{r}
 # get the data we want to compare
@@ -190,6 +180,9 @@ emmeans
 emmean_ps <- data.frame(pairs(emmeans(date_diffs_lm, "date"))) # p values
 emmean_ps
 ```
+
+Based on these brief and rough calculations, there are differences across dates, but that's also because we have a lot of data. So, even though the effect size differences are small (range of mean VPDs < 0.6 kPa), a significant difference is detected probably because we just have to many data points.
+
 
 
 ## Models
@@ -217,9 +210,6 @@ write.csv(humid_mod_df,
           "./Results_Statistics/HOBO_humidity_pairwise_diffs.csv")
 ```
 
-
-
-
 ## Boxplots
 
 Simple plots looking at the distribution of temperature and humidity for each treatment group:
@@ -237,8 +227,7 @@ ggplot(format_HOBO_data) +
   theme_classic()
 ```
 
-
-and by treatment group * date:
+and by treatment group \* date:
 
 ```{r boxplots by tmt and date}
 ggplot(format_HOBO_data) +
@@ -254,8 +243,6 @@ ggplot(format_HOBO_data) +
   theme_classic()+
   facet_wrap(~date)
 ```
-
-
 
 # For the Paper
 
@@ -275,15 +262,6 @@ humid_mod_df %>% dplyr::filter(term == "treatment")
 tmt_means
 ```
 
-
 ## Statement
 
-We maintained temperatures of 13.7 +/- 2.1 for the cold primary temperature treatment, 24.4 +/- 0.5 for control, and 37.3 +/- 2.0 for hot. However, relative humidity was not consistent among primary incubation temperature treatments (33% for control but only 9% and 11% for cold and hot, respectively), a difference that was significantly different in a Tukey HSD ANOVA post-hoc test. VPD during the primary incubation temperature treatments was ~1.4 for the cold treatment, ~2.0 for control, and ~5.7 for hot.
-
-
-
-
-
-
-
-
+We maintained temperatures of 13.7 +/- 2.1 for the cold primary temperature treatment, 24.4 +/- 0.5 for control, and 37.3 +/- 2.0 for hot. However, relative humidity was not consistent among primary incubation temperature treatments (33% for control but only 9% and 11% for cold and hot, respectively), a difference that was significantly different in a Tukey HSD ANOVA post-hoc test. VPD during the primary incubation temperature treatments was \~1.4 for the cold treatment, \~2.0 for control, and \~5.7 for hot.

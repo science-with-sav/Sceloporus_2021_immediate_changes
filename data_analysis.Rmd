@@ -1,5 +1,5 @@
 ---
-title: "Data Analysis: Acute Changes in CEWL as a Function of Temperature"
+title: "Acute Changes in CEWL as a Function of Temperature: Data Analysis"
 author: "Calvin Davis, Savannah Weaver"
 date: "2022"
 output: 
@@ -65,9 +65,6 @@ Check the correlation between dorsal and cloacal temps:
 temp_corr <- lm(data = temp_time_series, 
                 calibrated_dorsal_temp ~ calibrated_cloacal_temp)
 summary(temp_corr)
-
-#write.csv(broom.mixed::tidy(temp_corr), 
- #         "./Results_Statistics/body_temp_correlation.csv")
 ```
 
 They are actually pretty different, so run parallel models of CEWL, one with dorsal temp, and one with cloacal temp.
@@ -82,36 +79,29 @@ CEWL_LMM_02a <- lme4::lmer(data = temp_time_series,
                              calibrated_cloacal_temp *
                              treatment +
                              (1|date/lizard_ID))
-summary(CEWL_LMM_02a)
-vif(CEWL_LMM_02a)
 
 CEWL_LMM_02b <- lme4::lmer(data = temp_time_series,
                           CEWL_g_m2h ~ 
                              calibrated_dorsal_temp *
                              treatment +
                              (1|date/lizard_ID))
-summary(CEWL_LMM_02b)
-vif(CEWL_LMM_02b)
 ```
 
-These are REALLY good models, but based on the figures below, the relationship isn't actually linear... so test the inclusion of polynomial factors:
-
+Compare to the inclusion of polynomial factors:
 
 ```{r CEWL LMM 3}
 CEWL_LMM_03a <- lme4::lmer(data = temp_time_series,
                           CEWL_g_m2h ~ 
                              poly(calibrated_cloacal_temp, 2)*treatment +
                              (1|date/lizard_ID))
-summary(CEWL_LMM_03a)
-vif(CEWL_LMM_03a)
+
 anova(CEWL_LMM_03a, CEWL_LMM_02a)
 
 CEWL_LMM_03b <- lme4::lmer(data = temp_time_series,
                           CEWL_g_m2h ~ 
                              poly(calibrated_dorsal_temp, 2)*treatment +
                              (1|date/lizard_ID))
-summary(CEWL_LMM_03b)
-vif(CEWL_LMM_03b)
+
 anova(CEWL_LMM_03b, CEWL_LMM_02b)
 ```
 
@@ -124,8 +114,7 @@ CEWL_LMM_04a <- lme4::lmer(data = temp_time_series,
                           CEWL_g_m2h ~ 
                              (log(calibrated_cloacal_temp))*treatment +
                              (1|date/lizard_ID))
-summary(CEWL_LMM_04a)
-vif(CEWL_LMM_04a)
+
 anova(CEWL_LMM_04a, CEWL_LMM_02a)
 anova(CEWL_LMM_04a, CEWL_LMM_03a)
 
@@ -134,8 +123,7 @@ CEWL_LMM_04b <- lme4::lmer(data = temp_time_series,
                              log(calibrated_dorsal_temp)*treatment +
                              treatment +
                              (1|date/lizard_ID))
-summary(CEWL_LMM_04b)
-vif(CEWL_LMM_04b)
+
 anova(CEWL_LMM_04b, CEWL_LMM_02b)
 anova(CEWL_LMM_04b, CEWL_LMM_03b)
 ```
@@ -144,14 +132,16 @@ anova(CEWL_LMM_04b, CEWL_LMM_03b)
 The logarithmic models are NOT better than the linear or polynomial ones.
 
 
-VIFs are still close to 1 with the polynomial included, and all variables seem significant, so check assumptions:
+Check assumptions:
 
 ```{r}
 plot(CEWL_LMM_03a)
 plot(CEWL_LMM_03b)
+vif(CEWL_LMM_03a)
+vif(CEWL_LMM_03b)
 ```
 
-They both have a really weird spike, but otherwise there's no fanning or different pattern.
+They both have a really weird spike, but otherwise there's no fanning or different pattern. VIF is negligible.
 
 Re-run with p-values:
 
@@ -181,7 +171,7 @@ temp_time_series %>%
 These are the best models for CEWL ~ temperature. 
 
 
-
+Export:
 
 ```{r export best CEWL LMM}
 broom.mixed::tidy(CEWL_LMM_besta) %>%
@@ -221,8 +211,6 @@ rates_LMM_01 <- lme4::lmer(data = CEWL_time_series,
                           CEWL_g_m2h ~ 
                              poly(time_min, 2) * treatment +
                              (1|date/lizard_ID))
-summary(rates_LMM_01)
-vif(rates_LMM_01)
 drop1(rates_LMM_01)
 ```
 
@@ -233,7 +221,7 @@ rates_LMM_02 <- lme4::lmer(data = CEWL_time_series,
                           CEWL_g_m2h ~ 
                              time_min * treatment +
                              (1|date/lizard_ID))
-summary(rates_LMM_02)
+
 anova(rates_LMM_02, rates_LMM_01)
 ```
 
@@ -246,7 +234,7 @@ rates_LMM_03 <- lme4::lmer(data = CEWL_time_series,
                           CEWL_g_m2h ~ 
                              log(time_min) * treatment +
                              (1|date/lizard_ID))
-summary(rates_LMM_03)
+
 anova(rates_LMM_02, rates_LMM_03)
 anova(rates_LMM_01, rates_LMM_03)
 ```
@@ -257,6 +245,7 @@ Check linear regression assumptions:
 
 ```{r}
 plot(rates_LMM_01)
+vif(rates_LMM_01)
 ```
 
 Again, there is a really weird spike, but otherwise there's no fanning or pattern.
@@ -279,7 +268,8 @@ CEWL_time_series %>%
   summarise(n())
 ```
 
-Treatment explained some variation, and the effect of time explained most of the variation (F(,) = , p <)
+
+Export:
 
 ```{r}
 broom.mixed::tidy(rates_LMM_best) %>%
@@ -304,15 +294,11 @@ body_temp_LMM_01a <- lme4::lmer(data = temp_time_series,
                           calibrated_cloacal_temp ~ 
                              time_min * treatment +
                              (1|date/lizard_ID))
-summary(body_temp_LMM_01a)
-vif(body_temp_LMM_01a)
 
 body_temp_LMM_01b <- lme4::lmer(data = temp_time_series,
                           calibrated_dorsal_temp ~ 
                              time_min * treatment +
                              (1|date/lizard_ID))
-summary(body_temp_LMM_01b)
-vif(body_temp_LMM_01b)
 ```
 
 polynomial models:
@@ -322,16 +308,12 @@ body_temp_LMM_02a <- lme4::lmer(data = temp_time_series,
                           calibrated_cloacal_temp ~ 
                              poly(time_min, 2) * treatment +
                              (1|date/lizard_ID))
-summary(body_temp_LMM_02a)
-car::vif(body_temp_LMM_02a)
 anova(body_temp_LMM_02a, body_temp_LMM_01a)
 
 body_temp_LMM_02b <- lme4::lmer(data = temp_time_series,
                           calibrated_dorsal_temp ~ 
                              poly(time_min, 2) * treatment +
                              (1|date/lizard_ID))
-summary(body_temp_LMM_02b)
-car::vif(body_temp_LMM_02b)
 anova(body_temp_LMM_02b, body_temp_LMM_01b)
 ```
 
@@ -370,9 +352,11 @@ First, calculate rate of change for each lizard:
 change_LM <- lm(data = CEWL_time_series,
                           CEWL_g_m2h ~ 
                              time_min*lizard_ID)
-summary(change_LM)
+```
 
-# now get the trend/slope for each individual and make into a variable in df
+Now get the trend/slope for each individual and make into a variable in df.
+
+```{r}
 lizard_coeffs <- data.frame(emtrends(change_LM, "lizard_ID", var = "time_min")) %>%
    left_join(read_rds("Data/collection_dat_formatted.RDS"), 
              by = c("lizard_ID" = "individual_ID")) %>%
@@ -388,8 +372,6 @@ summary(lizard_coeffs)
 length(unique(CEWL_time_series$lizard_ID))
 ```
 
-
-
 NOW we can look at how the RATE of CEWL change (CEWL change per MINUTE) is different among lizards.
 
 ```{r CEWL rate of change LMM 1}
@@ -400,15 +382,12 @@ change_LMM_1 <- lme4::lmer(data = lizard_coeffs,
                        chamber_time_elapsed_hr + 
                   # include date as random effect bc sig diff weather
                        (1|date_factor))
-summary(change_LMM_1)
-car::vif(change_LMM_1)
+
 drop1(change_LMM_1)
 anova(change_LMM_1)
 ```
 
-Don't need to worry about VIF.
-
-drop mass first based on low SS and resulting AIC:
+Drop mass first based on low SS and resulting AIC:
 
 ```{r CEWL rate of change LMM 2}
 change_LMM_2 <- lme4::lmer(data = lizard_coeffs,
@@ -418,7 +397,6 @@ change_LMM_2 <- lme4::lmer(data = lizard_coeffs,
                        chamber_time_elapsed_hr + 
                   # include date as random effect bc sig diff weather
                        (1|date_factor))
-summary(change_LMM_2)
 drop1(change_LMM_2)
 anova(change_LMM_2)
 ```
@@ -434,7 +412,6 @@ change_LMM_3 <- lme4::lmer(data = lizard_coeffs,
                              chamber_time_elapsed_hr + 
                   # include date as random effect bc sig diff weather
                        (1|date_factor))
-summary(change_LMM_3)
 drop1(change_LMM_3)
 anova(change_LMM_3)
 ```
@@ -447,13 +424,19 @@ change_LMM_4 <- lme4::lmer(data = lizard_coeffs,
                           rate_change ~ 
                              treatment + 
                        (1|date_factor))
-summary(change_LMM_4)
 drop1(change_LMM_4)
 anova(change_LMM_4)
+```
+
+The simplest model is our best/final model.
+
+Check assumptions:
+
+```{r}
 plot(change_LMM_4)
 ```
 
-The simplest model is our best/final model, and assumptions look good.
+Assumptions look good.
 
 Save with p-values:
 
@@ -463,6 +446,14 @@ change_LMM_best <- lmerTest::lmer(data = lizard_coeffs,
                              treatment + 
                        (1|date_factor))
 summary(change_LMM_best)
+anova(change_LMM_best, type = "3", ddf = "Kenward-Roger")
+```
+
+Treatment group explained a significant amount of the variation (F(3,30)=18.29, p < 0.0001).
+
+Export:
+
+```{r}
 broom.mixed::tidy(change_LMM_best) %>%
   mutate(estimate = round(estimate, digits = 2),
          std.error = round(std.error, digits = 2),
@@ -471,11 +462,8 @@ broom.mixed::tidy(change_LMM_best) %>%
   dplyr::select(effect, group, term, estimate, 
                 std.error, statistic, df, p.value) %>%
   write.csv("./Results_Statistics/change_CEWL_best_model.csv")
-
-anova(change_LMM_best, type = "3", ddf = "Kenward-Roger")
 ```
 
-Treatment group explained a significant amount of the variation (F(3,30)=18.29, p < 0.0001).
 
 also get pairwise differences for change ~ tmt, which I will use to make the boxplot later:
 
@@ -581,6 +569,8 @@ CEWL_time
 
 ## legend
 
+This code uses one of our plots to make a large, detailed legend, which we can save and use in ggarrange later.
+
 ```{r make a fancy legend}
 ggplot(temp_time_series) +
    
@@ -622,12 +612,12 @@ ggplot(temp_time_series) +
                                    "Cooling" = cool,  
                                      "Heating" = heat),
                       name = "Treatment")  -> fancy_legend
-  
-  
-fancy_legend
+fancy_legend # view
+
+# save
 LEGEND <- as_ggplot(get_legend(fancy_legend)) 
 
-# save for using in arranged multi-plots
+# export
 ggsave(filename = "legend_only.pdf",
        plot = LEGEND,
        path = "./Results_Figures",
@@ -660,12 +650,6 @@ ggplot(temp_time_series) +
                      breaks = c(seq(15, 35, 5)),
                      labels = c(seq(15, 35, 5))) +
 
-  # control group
-   #annotate(geom = "point", x = 25.4, y = 9.6, 
-    #       size = 5, pch = 21, fill = control) + 
-   #annotate(geom = "point", x = 30.14, y = 21.4, 
-    #       size = 5, pch = 21, fill = control) + 
-  
   # annotations for cooling group
    annotate(geom = "point", x = 14.3, y = 5, 
            size = 4, pch = 25, fill = cool) + 
@@ -696,7 +680,6 @@ ggplot(temp_time_series) +
         legend.text = element_text(color = "black", 
                                  family = "sans", 
                                  size = 12),
-        #legend.text.align = 0,
         legend.position = "none",
         plot.margin = margin(t = 6, r = 6, b = 6, l = 6, unit = "pt")) +
   
@@ -729,14 +712,7 @@ ggsave(filename = "CEWL_int_body_temp.pdf",
 # get control data only
 temp_time_series %>%
   dplyr::filter(treatment == "Control") %>%
-  dplyr::filter(complete.cases(calibrated_cloacal_temp, CEWL_g_m2h)) %>%
-  group_by(lizard_ID) %>%
-  summarise(max(CEWL_g_m2h)) %>%
-  nrow()
-
-# plot control data only
-temp_time_series %>%
-  dplyr::filter(treatment == "Control") %>%
+  # pipe into ggplot
   ggplot() +
    aes(x = calibrated_cloacal_temp, 
        y = CEWL_g_m2h,
@@ -786,15 +762,11 @@ ggsave(filename = "CEWL_temp_control_lm.pdf",
 
 
 
-
-
-
-
 ## CEWL (relative) ~ time
 
 
 ```{r relative CEWL time}
-# n lizards
+# check n lizard sample size
 CEWL_time_series %>%
   dplyr::filter(complete.cases(time_min, relative_CEWL)) %>%
   group_by(lizard_ID) %>%
@@ -874,8 +846,6 @@ ggsave(filename = "CEWL_relative_time.pdf",
 ## CEWL Rate of Change
 
 ```{r rate of change fig}
-nrow(lizard_coeffs)
-
 ggplot() +
   geom_jitter(data = lizard_coeffs,
               aes(x = treatment,
@@ -948,6 +918,8 @@ ggsave(filename = "CEWL_change_min.pdf",
 
 
 ## Experimental Design Skematic
+
+We created reference values to use to make a figure that would show each step of our experiment. 
 
 ```{r load exp design values}
 exp_design <- read.csv("./Data/exp design.csv", 
@@ -1043,7 +1015,7 @@ ggsave(filename = "CEWL_time_multi_fig.pdf",
        device = "pdf",
        dpi = 600,
        units = "mm",
-       width = 120, height = 160) # full width = 180
+       width = 120, height = 160)
 ```
 
 ## Raw CEWL ~ Cloacal temp & control zoom-in

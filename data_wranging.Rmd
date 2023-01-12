@@ -1,5 +1,5 @@
 ---
-title: "Data Wrangling: Acute Changes in CEWL as a Function of Temperature"
+title: "Acute Changes in CEWL as a Function of Temperature: Data Wrangling"
 author: "Calvin Davis, Savannah Weaver"
 date: "2022"
 output: 
@@ -1234,7 +1234,45 @@ compare_CEWL %>%
 ```
 
 
+# VPD at CEWL Measurement
+
+We can calculate the VPD from the RH and temp recorded by the evaporimeter during the measurements we took.
+
+```{r}
+VPD_at_CEWL <- CEWL_time_series %>%
+  # calculate VPD for each temp/RH recording
+  mutate(e_s_kPa = 0.611 * exp((17.502*msmt_temp_C)/(msmt_temp_C + 240.97)),
+         VPD_kPa = e_s_kPa*(1 - (msmt_RH_percent/100)),
+         date = as.factor(date)) %>%
+  # we want mean VPD experienced for each lizard
+  group_by(lizard_ID, date, treatment) %>%
+  summarise(VPD_at_msmt = mean(VPD_kPa))
+summary(VPD_at_CEWL)
+
+# now calculate mean sd, and range for dates and treatments
+VPD_at_CEWL %>%
+  group_by(date) %>%
+  summarise(VPD_mean = mean(VPD_at_msmt),
+            VPD_sd = sd(VPD_at_msmt),
+            VPD_min = min(VPD_at_msmt),
+            VPD_max = max(VPD_at_msmt))
+VPD_at_CEWL %>%
+  group_by(treatment) %>%
+  summarise(VPD_mean = mean(VPD_at_msmt),
+            VPD_sd = sd(VPD_at_msmt),
+            VPD_min = min(VPD_at_msmt),
+            VPD_max = max(VPD_at_msmt))
+# and overall mean sd, and range
+mean(VPD_at_CEWL$VPD_at_msmt)
+sd(VPD_at_CEWL$VPD_at_msmt)
+min(VPD_at_CEWL$VPD_at_msmt)
+max(VPD_at_CEWL$VPD_at_msmt)  
+```
+
+
 # Export RDS files
+
+We export the wrangled dataframes as RDS files so they save the R formatting we created thoughout this file. If we saved them as csv's, we would have to reformat them every time we read them into a new Rmd.
 
 ```{r}
 write_rds(temp_time_series, "Data/temp_time_series.RDS")
