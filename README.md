@@ -20,7 +20,7 @@ The **"Data" folder** includes the following:
 - "HOBO_assignments.csv" = notes on which HOBOs were recording which treatment on a given date.
 - "TC calibration" subfolder = temperature recordings used to calibrate thermocouples against a reference thermometer.
 - "temp_time_series.RDS" = formatted temperature time series data, created in "data_wrangling.Rmd".
-- "Thermocouple Data" subfolder = lizard body temperature recordings for each date.
+- "Thermocouple Data" subfolder = lizard internal and surface body temperature recordings for each date.
 - "Weather Data" subfolder = contains weather data corresponding to each of the five different capture and measurement days of the study (California Polytechnic State University Irrigation Training and Research Center).
 
 
