@@ -27,7 +27,7 @@ This code gets summary statistics of the ambient conditions at different stages 
 
 # Load in Data
 
-This data was collected using Onset HOBO temperature and humidity dataloggers during the course of our heating/cooling CEWL experiment.
+This data was collected using Onset HOBO temperature and humidity dataloggers during the course of our heating/cooling CEWL experiments.
 
 The data is in a separate file for each download for each logger, so I need to compile each of those into one dataset.
 
