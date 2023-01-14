@@ -620,7 +620,7 @@ Remove sections of points where the probe got disconnected:
 
 lizard      note
 403	      error @520, moved @650
-405	      error @320 &660
+405	      error @320 & 660
 406	      error @250 & 850
 408	      broke seal ~170
 411	      large move @400
@@ -693,7 +693,7 @@ summary(l405_filtered)
 
 ### Lizard 406
 
-Will remove from 238 to 287 seconds, 60 seconds total, for beginning error and last 81 seconds (820 to 901 seconds) due to failure to re-equibrilate after second error.
+Will remove from 238 to 287 seconds, 49 seconds total, for beginning error and last 81 seconds (820 to 901 seconds) due to failure to re-equibrilate after second error.
 
 ```{r 406 CEWL err}
 all_CEWL_data %>%
@@ -724,7 +724,7 @@ summary(l406_filtered)
 
 ### Lizard 408
 
-Will remove one section from 144 to 222 seconds, 80 seconds total.
+Will remove one section from 144 to 222 seconds, 78 seconds total.
 
 ```{r 408 CEWL err}
 all_CEWL_data %>%
