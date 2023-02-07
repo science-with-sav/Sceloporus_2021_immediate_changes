@@ -372,6 +372,30 @@ summary(lizard_coeffs)
 length(unique(CEWL_time_series$lizard_ID))
 ```
 
+
+Test whether rate of change was sig diff from zero for each tmt group using t-tests:
+
+```{r}
+#heating
+heat <- lizard_coeffs %>%
+  dplyr::filter(treatment == "Heating")
+heat_t <- t.test(heat$rate_change, mu = 0, alternative = "two.sided")
+heat_t
+
+#cooling
+cool <- lizard_coeffs %>%
+  dplyr::filter(treatment == "Cooling")
+cool_t <- t.test(cool$rate_change, mu = 0, alternative = "two.sided")
+cool_t
+
+#control
+cntl <- lizard_coeffs %>%
+  dplyr::filter(treatment == "Control")
+cntl_t <- t.test(cntl$rate_change, mu = 0, alternative = "two.sided")
+cntl_t
+```
+
+
 NOW we can look at how the RATE of CEWL change (CEWL change per MINUTE) is different among lizards.
 
 ```{r CEWL rate of change LMM 1}
@@ -824,7 +848,7 @@ ggplot() +
                       breaks = seq(1, 15, 2)) +
 
    labs(x = "Time (minutes)" , 
-        y = bquote('CEWL (g '*m^-2*' '*h^-1*')')) -> CEWLr_time
+        y = bquote('Relative CEWL (g '*m^-2*' '*h^-1*')')) -> CEWLr_time
   
 CEWLr_time
 
