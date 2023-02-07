@@ -109,6 +109,20 @@ hist(all_HOBO_data$temp_C)
 hist(all_HOBO_data$relative_humidity)
 ```
 
+How many observations are there for a given logger serial at a given datetime? This should only be one. 
+
+```{r}
+all_HOBO_data %>%
+  group_by(HOBO_serial_number, date_time_PST) %>%
+  dplyr::summarise(n = n()) %>%
+  arrange(n)
+```
+
+Good, no duplicate data.
+
+
+
+
 ## Attach Treatment Info
 
 ```{r tmt assignments}
@@ -126,6 +140,32 @@ format_HOBO_data <- all_HOBO_data %>%
   dplyr::select(-serial, -trial)
 summary(format_HOBO_data)
 ```
+
+Dates there is data for each tmt:
+
+```{r}
+format_HOBO_data %>%
+  group_by(date, treatment) %>%
+  summarise(n = n())
+```
+
+We have data for all (incubation) treatment groups on these dates:
+October 5, 11, 12, 18, and 19
+This is correct! (See data analysis line 52, in the first code chunk.)
+
+How many loggers were used on a given date for a given tmt group?
+
+```{r}
+format_HOBO_data %>%
+  # first, aggregate for each hobo
+  group_by(HOBO_serial_number, date, treatment) %>%
+  summarise(n = n()) %>%
+  # then group hobos
+  group_by(date, treatment) %>%
+  summarise(n = n())
+```
+
+2 loggers per tmt per date, as expected.
 
 # Statistics
 

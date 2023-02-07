@@ -49,6 +49,7 @@ Get the RDS files created in the data wrangling Rmd:
 ```{r}
 temp_time_series <- read_rds("Data/temp_time_series.RDS")
 CEWL_time_series <- read_rds("Data/CEWL_time_series.RDS")
+unique(CEWL_time_series$date)
 ```
 
 
