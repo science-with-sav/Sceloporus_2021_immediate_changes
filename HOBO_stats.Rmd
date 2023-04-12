@@ -187,15 +187,17 @@ logger_means
 **These values are for the primary temperature treatment in the incubation chambers, before the CEWL time series measurements.**
 
 ```{r tmt means}
-tmt_means <- format_HOBO_data %>% 
+tmt_means <- format_HOBO_data %>%
+  # calculate VPD for ALL temp/RH, based on Campbell & Normal 1998
+  mutate(e_s_kPa = 0.611 * exp((17.502*temp_C)/(temp_C + 240.97)),
+         VPD_kPa = e_s_kPa*(1 - (relative_humidity/100))) %>% 
   group_by(treatment) %>%
   summarise(temp_mean = mean(temp_C),
             temp_SD = sd(temp_C),
             humidity_mean = mean(relative_humidity),
-            humidity_SD = sd(relative_humidity)) %>%
-  # calculate VPD, based on Campbell & Normal 1998
-  mutate(e_s_kPa = 0.611 * exp((17.502*temp_mean)/(temp_mean + 240.97)),
-         VPD_kPa = e_s_kPa*(1 - (humidity_mean/100)))
+            humidity_SD = sd(relative_humidity),
+            VPD_mean = mean(VPD_kPa),
+            VPD_sd = sd(VPD_kPa)) 
 tmt_means
 write.csv(tmt_means, "./Results_Statistics/HOBO_climate_means_by_treatment.csv")
 ```
