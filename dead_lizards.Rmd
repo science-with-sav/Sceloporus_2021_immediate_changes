@@ -20,6 +20,8 @@ if (!require("ggpubr")) install.packages("ggpubr")
 library("ggpubr") # arrange multi-figures
 if (!require("RColorBrewer")) install.packages("RColorBrewer") 
 library("RColorBrewer") # colors
+if (!require("viridis")) install.packages("viridis") 
+library("viridis") # colors
 if (!require("rmdformats")) install.packages("rmdformats")
 library("rmdformats") # clean html R markdown format
 ```
@@ -387,6 +389,11 @@ cooling_compare %>%
 ## color
 
 ```{r}
+#cool <- c(brewer.pal(11, "Spectral")[c(10)])
+#heat <- c(brewer.pal(11, "Spectral")[c(1)])
+#control1 <- c(brewer.pal(11, "Spectral")[c(7)])
+#control2 <- c(brewer.pal(11, "Spectral")[c(4)])
+
 cool  <- c(brewer.pal(11, "RdBu")[c(11)])
 heat  <- c(brewer.pal(11, "RdBu")[c(2)])
 control1  <- c(brewer.pal(11, "RdBu")[c(8)]) # cooling lizard
