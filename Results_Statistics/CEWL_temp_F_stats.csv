@@ -1,7 +1,7 @@
 "","variable","partial_sum_of_squares","F_statistic","p_value"
-"treatment","treatment",75,"22.9 (2,26)",1.80427191705535e-06
-"poly(clo_temp_per_min, 2)","poly(clo_temp_per_min, 2)",276,"84.07 (2,444)",1.09806721768253e-31
-"treatment:poly(clo_temp_per_min, 2)","treatment:poly(clo_temp_per_min, 2)",315,"47.92 (4,452)",1.36536485633954e-33
-"treatment1","treatment",106,"29.96 (2,26)",1.72058462686968e-07
-"poly(dors_temp_per_min, 2)","poly(dors_temp_per_min, 2)",329,"93.24 (2,440)",1.72415277176306e-34
-"treatment:poly(dors_temp_per_min, 2)","treatment:poly(dors_temp_per_min, 2)",267,"37.86 (4,450)",2.57034639823307e-27
+"treatment","treatment",65,"20.45 (2,25)",5.37076703765561e-06
+"poly(clo_temp_per_min, 2)","poly(clo_temp_per_min, 2)",331,"104.83 (2,429)",8.48747702645897e-38
+"treatment:poly(clo_temp_per_min, 2)","treatment:poly(clo_temp_per_min, 2)",285,"45.14 (4,437)",9.78577457301755e-32
+"treatment1","treatment",92,"26.74 (2,25)",5.96509197965201e-07
+"poly(dors_temp_per_min, 2)","poly(dors_temp_per_min, 2)",362,"104.7 (2,426)",1.05141875815005e-37
+"treatment:poly(dors_temp_per_min, 2)","treatment:poly(dors_temp_per_min, 2)",250,"36.13 (4,435)",4.41648094841191e-26

@@ -1,13 +1,13 @@
 "","effect","group","term","estimate","std.error","statistic","df","p.value"
-"1","fixed",NA,"(Intercept)",0.87,3.73,0.23,33,0.816215684683141
-"2","fixed",NA,"treatmentCooling",6.05,3.22,1.88,326,0.0612899663265573
-"3","fixed",NA,"treatmentHeating",16.69,3.25,5.13,302,5.07564004648665e-07
-"4","fixed",NA,"poly(dors_temp_per_min, 2)1",235.71,65.96,3.57,459,0.000389551907943807
-"5","fixed",NA,"poly(dors_temp_per_min, 2)2",-439.66,78.85,-5.58,457,4.22235989789298e-08
-"6","fixed",NA,"treatmentCooling:poly(dors_temp_per_min, 2)1",-207.98,65.99,-3.15,459,0.00172900052152895
-"7","fixed",NA,"treatmentHeating:poly(dors_temp_per_min, 2)1",-211.99,66.01,-3.21,459,0.00141246700890528
-"8","fixed",NA,"treatmentCooling:poly(dors_temp_per_min, 2)2",460.19,78.88,5.83,457,1.02618755754794e-08
-"9","fixed",NA,"treatmentHeating:poly(dors_temp_per_min, 2)2",431.63,78.89,5.47,457,7.37120002785933e-08
-"10","ran_pars","lizard_ID:date","sd__(Intercept)",3.17,NA,NA,NA,NA
-"11","ran_pars","date","sd__(Intercept)",4.71,NA,NA,NA,NA
-"12","ran_pars","Residual","sd__Observation",1.33,NA,NA,NA,NA
+"1","fixed",NA,"(Intercept)",2.19,3.49,0.63,26,0.535718719703265
+"2","fixed",NA,"treatmentCooling",4.97,2.97,1.67,262,0.0956531145632226
+"3","fixed",NA,"treatmentHeating",15.45,2.99,5.17,246,4.77711712998564e-07
+"4","fixed",NA,"poly(dors_temp_per_min, 2)1",179.88,54.76,3.29,444,0.00110047718885184
+"5","fixed",NA,"poly(dors_temp_per_min, 2)2",-410.9,72.93,-5.63,441,3.14008342488514e-08
+"6","fixed",NA,"treatmentCooling:poly(dors_temp_per_min, 2)1",-149.68,54.79,-2.73,444,0.0065504735162752
+"7","fixed",NA,"treatmentHeating:poly(dors_temp_per_min, 2)1",-158.2,54.8,-2.89,444,0.00408295347777577
+"8","fixed",NA,"treatmentCooling:poly(dors_temp_per_min, 2)2",428.19,72.97,5.87,441,8.652464412652e-09
+"9","fixed",NA,"treatmentHeating:poly(dors_temp_per_min, 2)2",403.39,72.96,5.53,441,5.53521050699597e-08
+"10","ran_pars","lizard_ID:date","sd__(Intercept)",3.21,NA,NA,NA,NA
+"11","ran_pars","date","sd__(Intercept)",4.7,NA,NA,NA,NA
+"12","ran_pars","Residual","sd__Observation",1.31,NA,NA,NA,NA

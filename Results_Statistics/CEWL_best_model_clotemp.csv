@@ -1,13 +1,13 @@
 "","effect","group","term","estimate","std.error","statistic","df","p.value"
-"1","fixed",NA,"(Intercept)",-1.66,4.03,-0.41,37,0.683147651775249
-"2","fixed",NA,"treatmentCooling",9.18,3.55,2.59,320,0.0100385650560721
-"3","fixed",NA,"treatmentHeating",19.07,3.56,5.35,294,1.78352023940098e-07
-"4","fixed",NA,"poly(clo_temp_per_min, 2)1",198.08,62.23,3.18,457,0.00155721098612142
-"5","fixed",NA,"poly(clo_temp_per_min, 2)2",-531.76,89.85,-5.92,461,6.34886706018206e-09
-"6","fixed",NA,"treatmentCooling:poly(clo_temp_per_min, 2)1",-159.23,62.27,-2.56,457,0.0108782092810102
-"7","fixed",NA,"treatmentHeating:poly(clo_temp_per_min, 2)1",-169.79,62.28,-2.73,457,0.00664907959325404
-"8","fixed",NA,"treatmentCooling:poly(clo_temp_per_min, 2)2",553.04,89.88,6.15,461,1.65099825861611e-09
-"9","fixed",NA,"treatmentHeating:poly(clo_temp_per_min, 2)2",518.8,89.88,5.77,461,1.43745113429732e-08
-"10","ran_pars","lizard_ID:date","sd__(Intercept)",3.46,NA,NA,NA,NA
+"1","fixed",NA,"(Intercept)",-0.47,3.79,-0.12,29,0.902111550629776
+"2","fixed",NA,"treatmentCooling",8.26,3.29,2.51,262,0.0125373616134509
+"3","fixed",NA,"treatmentHeating",17.98,3.29,5.46,244,1.16552848367804e-07
+"4","fixed",NA,"poly(clo_temp_per_min, 2)1",139.99,50.99,2.75,442,0.00628684522254715
+"5","fixed",NA,"poly(clo_temp_per_min, 2)2",-502.45,82.93,-6.06,445,2.92357177491003e-09
+"6","fixed",NA,"treatmentCooling:poly(clo_temp_per_min, 2)1",-99.15,51.03,-1.94,442,0.0526703145500559
+"7","fixed",NA,"treatmentHeating:poly(clo_temp_per_min, 2)1",-114.19,51.03,-2.24,442,0.0257337034086922
+"8","fixed",NA,"treatmentCooling:poly(clo_temp_per_min, 2)2",519.69,82.97,6.26,445,8.86080263933677e-10
+"9","fixed",NA,"treatmentHeating:poly(clo_temp_per_min, 2)2",490.25,82.96,5.91,445,6.81749116436615e-09
+"10","ran_pars","lizard_ID:date","sd__(Intercept)",3.49,NA,NA,NA,NA
 "11","ran_pars","date","sd__(Intercept)",4.91,NA,NA,NA,NA
-"12","ran_pars","Residual","sd__Observation",1.28,NA,NA,NA,NA
+"12","ran_pars","Residual","sd__Observation",1.26,NA,NA,NA,NA
