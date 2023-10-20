@@ -1112,7 +1112,8 @@ starting_CEWL <- filtered2_df %>%
    group_by(lizard_ID) %>%
    mutate(start_time = min(time_sec)) %>%
    dplyr::filter(time_sec == start_time) %>%
-   dplyr::select(lizard_ID, starting_CEWL = CEWL_g_m2h)
+   dplyr::select(lizard_ID, 
+                 starting_CEWL = CEWL_g_m2h)
 head(starting_CEWL)
 summary(starting_CEWL)
 ```
@@ -1146,12 +1147,26 @@ summary(CEWL_time_series)
 unique(CEWL_time_series$lizard_ID)
 length(unique(CEWL_time_series$lizard_ID)) # 37
 
-temp_time_series <- CEWL_time_series %>%
+temp_time_series0 <- CEWL_time_series %>%
    # filter out lizards with missing TC data
    dplyr::filter(lizard_ID %nin% c(428, 437, 439, 416)) %>%
    left_join(TC_corrected_data, 
              by = c('date', 'time_sec', "lizard_ID")) %>%
   dplyr::filter(complete.cases(calibrated_cloacal_temp, calibrated_dorsal_temp))
+
+# get relative temps too
+start_temp <- temp_time_series0 %>%
+   group_by(lizard_ID) %>%
+   mutate(start_time = min(time_sec)) %>%
+   dplyr::filter(time_sec == start_time) %>%
+   dplyr::select(lizard_ID, 
+                 starting_clo_temp = calibrated_cloacal_temp,
+                 starting_dors_temp = calibrated_dorsal_temp)
+
+temp_time_series <- temp_time_series0 %>% 
+  left_join(start_temp, by = "lizard_ID") %>% 
+  mutate(relative_clo_temp = calibrated_cloacal_temp - starting_clo_temp,
+         relative_dors_temp = calibrated_dorsal_temp - starting_dors_temp)
 summary(temp_time_series)
 unique(temp_time_series$lizard_ID)
 
