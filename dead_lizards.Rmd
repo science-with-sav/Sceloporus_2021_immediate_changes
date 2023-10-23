@@ -30,11 +30,22 @@ library("rmdformats") # clean html R markdown format
 
 # Background
 
-This code goes through data wrangling, summary statistics, and figures for data on two deceased lizards that we opportunistically studied. Their data are part of a study on the rate of change of cutaneous evaporative water loss (CEWL) in response to temperature change in Western Fence Lizards (*Sceloporus occidentalis*) (**published in the Journal __ in 2023**). Data was collected and analyzed by Calvin Davis and Savannah Weaver, under the advising of Dr. Emily Taylor at California Polytechnic State University. 
+This code goes through data wrangling, summary statistics, and figures for data on two deceased lizards that we opportunistically studied. Their data are part of a study on the rate of change of cutaneous evaporative water loss (CEWL) in response to temperature change in Western Fence Lizards (*Sceloporus occidentalis*). Data was collected and analyzed by Calvin Davis and Savannah Weaver, and the project was advised by Dr. Emily Taylor at California Polytechnic State University. 
 
 
  
 # Load Data
+
+
+## Live Lizzies
+
+Data for average CEWL at each temperature.
+
+```{r}
+live_CEWL_per_temp <- read_rds("Data/CEWL_by_temp_tmt.RDS")
+summary(live_CEWL_per_temp)
+```
+
 
 
 ## CEWL
@@ -335,52 +346,123 @@ summary(CEWL_time_temp_subset)
 
 Compare CEWL at a common body temp to the live lizards.
 
+## Prep Dead Data
+
 ```{r}
-# prepare dead lizard data
 mean_CEWL_temp_dead <- CEWL_time_temp_subset %>%
-  mutate(rounded_cal_c_temp = round(calibrated_cloacal_temp_C, 0)) %>%
+  mutate(rounded_cal_c_temp = round(calibrated_cloacal_temp_C, 0),
+         # need to update format to join live lizard data
+         treatment = factor(treatment, labels = c("Control", "Cooling", "Heating"))
+         ) %>%
   dplyr::filter(complete.cases(rounded_cal_c_temp)) %>%
-  group_by(lizard_ID, treatment, liz_tmt, rounded_cal_c_temp) %>%
-  summarise(mean_CEWL = mean(CEWL_g_m2h),
-            n = n())
+  group_by(treatment, rounded_cal_c_temp) %>%
+  summarise(mean_CEWL = mean(CEWL_g_m2h)
+            #n = n()
+            )
+
 mean_CEWL_temp_dead
 
-# compare heating tmt dead vs live
-# load data from live lizards
-live_heat_CEWL <- read_rds("./Data/CEWL_by_temp_heating_tmt.csv")
+summary(mean_CEWL_temp_dead)
+```
 
-# put into one df
-heating_compare <- mean_CEWL_temp_dead %>%
-  dplyr::filter(treatment == "heating") %>%
+
+## Join Dead & Live
+
+### For Stats
+
+```{r}
+CEWL_per_temp_compare <- mean_CEWL_temp_dead %>% 
   dplyr::select(treatment, 
                 rounded_cal_c_temp, 
-                heating_mean_CEWL_dead = mean_CEWL) %>%
-  left_join(live_heat_CEWL, by = 'rounded_cal_c_temp') %>%
-  mutate(dead_minus_live_diff = heating_mean_CEWL_dead - heating_mm_CEWL)
+                mean_CEWL_dead = mean_CEWL) %>%
+  left_join(
+    live_CEWL_per_temp, 
+    by = c('treatment', 'rounded_cal_c_temp')
+  ) %>% 
+  mutate(
+    dead_minus_live_diff = mean_CEWL_dead - mean_mean_CEWL
+  ) %>% 
+  dplyr::filter(complete.cases(dead_minus_live_diff))
+```
 
-heating_compare %>%
+
+### For Figs
+
+```{r}
+# prep ded
+mean_CEWL_temp_dead_pretty <- mean_CEWL_temp_dead %>% 
+  mutate(lizards = "Deceased")
+
+# prep live
+live_CEWL_per_temp_pretty <- live_CEWL_per_temp %>% 
+  dplyr::select(treatment, rounded_cal_c_temp,
+                mean_CEWL = mean_mean_CEWL) %>% 
+  mutate(lizards = "Live")
+
+CEWL_per_temp_compare_pretty <- mean_CEWL_temp_dead_pretty %>% 
+  rbind(live_CEWL_per_temp_pretty) %>% 
+  mutate(lizards = factor(lizards, levels = c("Live", "Deceased")))
+
+summary(CEWL_per_temp_compare_pretty)
+```
+
+
+```{r}
+# prep live liz data
+live_CEWL_per_temp_sub <- live_CEWL_per_temp %>% 
+  mutate(liz_tmt = paste("Live", treatment, sep = " - ")) %>% 
+  dplyr::select(
+    liz_tmt, 
+    treatment,
+    clo_temp = rounded_cal_c_temp,
+    CEWL_g_m2h = mean_mean_CEWL,
+    CEWL_sem
+  ) %>% 
+  # remove skewed pt bc of few indivs measured
+  dplyr::filter(!(clo_temp == 16 & treatment == "Heating"))
+
+raw_dead_vs_CEWL_per_temp_live <- CEWL_time_temp_subset %>% 
+  # get rid of CEWL that's not linked to Tb
+  # by doing this, we essentially recorded CEWL once every minute
+  dplyr::filter(complete.cases(calibrated_cloacal_temp_C)) %>% 
+  # subset to common/pertinent cols only
+  dplyr::select(
+    liz_tmt, 
+    treatment,
+    clo_temp = calibrated_cloacal_temp_C,
+    CEWL_g_m2h
+  ) %>% 
+  mutate(CEWL_sem = NA) %>% 
+  # ADD LIVE LIZARD DATA
+  rbind(live_CEWL_per_temp_sub)
+```
+
+
+
+
+
+
+
+
+
+## Summarize
+
+```{r}
+CEWL_per_temp_compare %>%
+  group_by(treatment) %>% 
   summarise(mean_diff = mean(dead_minus_live_diff), 
             sd_diff = sd(dead_minus_live_diff), 
             max_diff = max(dead_minus_live_diff), 
-            min_diff = min(dead_minus_live_diff)) %>%
-  mutate(sem_diff = sd_diff/sqrt(nrow(heating_compare)))
-
-# compare cooling tmt dead vs live
-# load data from live lizards
-live_cool_CEWL <- read_rds("./Data/CEWL_by_temp_cooling_tmt.csv")
-cooling_compare <- mean_CEWL_temp_dead %>%
-  dplyr::filter(treatment == "cooling") %>%
-  dplyr::select(treatment, rounded_cal_c_temp, cooling_mean_CEWL_dead = mean_CEWL) %>%
-  left_join(live_cool_CEWL, by = 'rounded_cal_c_temp') %>%
-  mutate(dead_minus_live_diff = cooling_mean_CEWL_dead - cooling_mm_CEWL)
-
-cooling_compare %>%
-  summarise(mean_diff = mean(dead_minus_live_diff, na.rm = T), 
-            sd_diff = sd(dead_minus_live_diff, na.rm = T), 
-            max_diff = max(dead_minus_live_diff, na.rm = T), 
-            min_diff = min(dead_minus_live_diff, na.rm = T)) %>%
-  mutate(sem_diff = sd_diff/sqrt(nrow(cooling_compare)))
+            min_diff = min(dead_minus_live_diff),
+            n = n()) %>%
+  mutate(sem_diff = sd_diff/sqrt(n))
 ```
+
+
+
+
+
+
 
 
 
@@ -394,6 +476,7 @@ cooling_compare %>%
 #control1 <- c(brewer.pal(11, "Spectral")[c(7)])
 #control2 <- c(brewer.pal(11, "Spectral")[c(4)])
 
+control <- c(brewer.pal(9, "Greys")[c(5)])
 cool  <- c(brewer.pal(11, "RdBu")[c(11)])
 heat  <- c(brewer.pal(11, "RdBu")[c(2)])
 control1  <- c(brewer.pal(11, "RdBu")[c(8)]) # cooling lizard
@@ -401,19 +484,19 @@ control2  <- c(brewer.pal(11, "RdBu")[c(4)]) # heating lizard
 ```
 
 
-## CEWL (relative) ~ time
+## * CEWL (relative) ~ time
 
 
 ```{r relative CEWL time}
 ggplot(CEWL_time_temp_subset) +
-   geom_point(aes(x= time_min, 
-                  y = relative_CEWL,
-                  shape = treatment,
-                  color = liz_tmt),
-              size = 0.5, 
-              alpha = 0.5) +
-   geom_hline(yintercept = 0, size = 0.5,
+  
+  geom_hline(yintercept = 0, size = 0.5,
               linetype = "dashed", color = "black") +
+  
+  geom_line(aes(x= time_min, 
+                  y = relative_CEWL,
+                  color = liz_tmt)) +
+   
    theme_classic() +
    theme(text = element_text(color = "black", 
                             family = "sans", 
@@ -424,27 +507,27 @@ ggplot(CEWL_time_temp_subset) +
         legend.text = element_text(color = "black", 
                                  family = "sans", 
                                  size = 12),
-        legend.position = "none") +
-   scale_shape_manual(values = c(21,25,24),
-                     name = "Treatment") + 
+        axis.title.y = element_text(vjust = -1),
+        legend.position = "none",
+        plot.margin = margin(t = 1, r = 1, b = 4, l = 1, unit = "pt")) +
+  
    scale_color_manual(values = c("A control" = control1,
                                  "D control" = control2,
                                      "A cooling" = cool,  
                                      "D heating" = heat),
                       name = "Treatment") +
+  scale_x_continuous(limits = c(1, 15), 
+                      breaks = seq(1, 15, 2)) +
   
    annotate("text", label = "Cooling", 
-            x = 14.5, y = -8.5, size = 4, color = cool) +
+            x = 14.5, y = -8.5, size = 2.9, color = cool) +
    annotate("text", label = "Control[Cool]", parse = T,
-            x = 14.5, y = -2.8, size = 3, color = control1) + 
+            x = 14.2, y = -3, size = 2.5, color = control1) + 
    
    annotate("text", label = "Heating", 
-            x = 14.5, y = 24, size = 4, color = heat) +
+            x = 14.5, y = 24, size = 2.9, color = heat) +
    annotate("text", label = "Control[Heat]", parse = T,
-            x = 14.5, y = 3.8, size = 3, color = control2) + 
-  
-   scale_x_continuous(limits = c(1, 15), 
-                      breaks = seq(1, 15, 2)) +
+            x = 14.2, y = 5, size = 2.5, color = control2) + 
 
    labs(x = "Time (minutes)" , 
         y = bquote('CEWL (g '*m^-2*' '*h^-1*')')) -> CEWLr_time
@@ -548,7 +631,143 @@ ggsave(filename = "CEWL_temp_dead.pdf",
 ```
 
 
-## Multi-Pane Figure
+
+
+
+## * CEWL ~ temp (mean live vs raw ded)
+
+```{r}
+ggplot(raw_dead_vs_CEWL_per_temp_live) +
+  geom_point(
+    aes(
+      x = clo_temp,
+      y = CEWL_g_m2h,
+      color = liz_tmt,
+      fill = liz_tmt,
+      shape = liz_tmt
+    )
+  ) +
+ 
+   theme_classic() +
+   theme(text = element_text(color = "black", 
+                            family = "sans", 
+                            size = 12),
+        axis.text = element_text(color = "black", 
+                                 family = "sans", 
+                                 size = 8),
+        legend.text = element_text(color = "black", 
+                                 family = "sans", 
+                                 size = 12),
+        legend.position = "none",
+        plot.margin = margin(t = 1, r = 1, b = 1, l = 8, unit = "pt")) +
+   
+  scale_x_continuous(limits = c(10, 40),
+                     breaks = c(seq(10, 40, 5)),
+                     labels = c(seq(10, 40, 5))) +
+  scale_color_manual(values = c("A control" = control1,
+                                "A cooling" = cool,
+                                "D control" = control2,
+                                "D heating" = heat,
+                                "Live - Control" = control,
+                                "Live - Cooling" = cool,
+                                "Live - Heating" = heat
+                                ),
+                      name = "Treatment") +
+  scale_fill_manual(values = c("A control" = control1,
+                                "A cooling" = cool,
+                                "D control" = control2,
+                                "D heating" = heat,
+                                "Live - Control" = control,
+                                "Live - Cooling" = cool,
+                                "Live - Heating" = heat
+                                ),
+                      name = "Treatment") +
+     # open shapes for dead, closed for live
+  scale_shape_manual(values = c("A control" = 1,
+                                "A cooling" = 6,
+                                "D control" = 1,
+                                "D heating" = 2,
+                                "Live - Control" = 21,
+                                "Live - Cooling" = 25,
+                                "Live - Heating" = 24),
+                     name = "Treatment") + 
+  
+   # control group
+  annotate("text", x = 23.2, y = 32, label = "Control[Heat]", parse = T,
+           size = 2.5, family = "sans", color = control2) +
+  annotate("text", x = 22.5, y = 25, label = "Control[Cool]", parse = T,
+           size = 2.5, family = "sans", color = control1) +
+  # annotate("text", x = 24, y = 12, label = "Control", parse = T,
+  #          size = 2.9, family = "sans", color = control) +
+  
+  # annotations for cooling group
+  annotate("text", label = "Cooling", 
+            x = 24, y = 0, size = 2.9, color = cool) +
+  annotate("text", x = 10.5, y = 2.5, label = "T[15]", parse = T,
+           size = 3, family = "sans", color = cool) +
+  annotate("text", x = 29, #x = 36.5, 
+           y = 2.5, label = "T[1]", parse = T,
+           size = 3, family = "sans", color = cool) +
+  
+  # annotations for heating group - dead
+  annotate("text", label = "Heating", # dead
+            x = 29.5, y = 58, size = 2.9, color = heat) +
+  annotate("text", x = 20.1, y = 40, label = "T[1]", parse = T,
+           size = 3, family = "sans", color = heat) +
+  annotate("text", x = 36.5, y = 67, label = "T[15]", parse = T,
+           size = 3, family = "sans", color = heat) +
+  
+  # annotations for heating group - live
+  # annotate("text", label = "Heating", # live
+  #           x = 21, y = 22, size = 2.9, color = heat) +
+  # annotate("text", x = 16, y = 10, label = "T[1]", parse = T,
+  #          size = 3, family = "sans", color = heat) +
+  # annotate("text", x = 39.5, y = 28, label = "T[15]", parse = T,
+  #          size = 3, family = "sans", color = heat) +
+
+   labs(x = expression('T'[b]~' (°C)'),
+        y = bquote('CEWL (g '*m^-2*' '*h^-1*')')) -> dead_vs_live_fig
+dead_vs_live_fig
+```
+
+
+
+
+
+
+## CEWL ~ avg temp (live vs ded)
+
+```{r}
+ggplot(CEWL_per_temp_compare_pretty) +
+  geom_point(
+    aes(
+      x = rounded_cal_c_temp,
+      y = mean_CEWL,
+      color = treatment,
+      shape = lizards
+    )
+  ) +
+  theme_classic()
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Export Multi-Pane Figures
+
+
+## Original
 
 ```{r}
 # arrange
@@ -567,4 +786,39 @@ ggsave(filename = "dead_lizards_time_and_temp_figs.pdf",
        units = "mm",
        width = 120, height = 160)
 ```
+
+
+
+## * Updated
+
+```{r}
+dead_arrange2 <- ggarrange(CEWLr_time, 
+                           dead_vs_live_fig,
+                           nrow = 1, ncol = 2,
+                           widths = c(1,1),
+                           labels = c("A", "B"))
+
+# export
+ggsave(filename = "dead_liz_time_temp_new.pdf",
+       plot = dead_arrange2,
+       path = "./Results_Figures",
+       device = "pdf",
+       dpi = 600,
+       units = "mm",
+       width = 160, height = 70)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
