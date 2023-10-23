@@ -20,8 +20,6 @@ if (!require("ggpubr")) install.packages("ggpubr")
 library("ggpubr") # arrange multi-figures
 if (!require("RColorBrewer")) install.packages("RColorBrewer") 
 library("RColorBrewer") # colors
-if (!require("viridis")) install.packages("viridis") 
-library("viridis") # colors
 if (!require("rmdformats")) install.packages("rmdformats")
 library("rmdformats") # clean html R markdown format
 ```

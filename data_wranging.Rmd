@@ -1219,7 +1219,12 @@ mean_CEWL_temp <- temp_time_series %>%
   summarise(mean_CEWL = mean(CEWL_g_m2h)) %>%
   # avg each tmt group at each degree
   group_by(treatment, rounded_cal_c_temp) %>%
-  summarise(mean_mean_CEWL = mean(mean_CEWL))
+  summarise(mean_mean_CEWL = mean(mean_CEWL),
+            CEWL_sd = sd(mean_CEWL),
+            CEWL_min = min(mean_CEWL),
+            CEWL_max = max(mean_CEWL),
+            n = n()) %>%
+  mutate(CEWL_sem = CEWL_sd/sqrt(n))
 
 # save to compare to ded lizzies
 write_rds(mean_CEWL_temp, "./Data/CEWL_by_temp_tmt.RDS")
