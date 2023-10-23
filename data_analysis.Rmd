@@ -347,7 +347,7 @@ plot(lizard_temp_time_lm_log)
 Now get the trend/slope for each individual and make into a variable in df.
 
 ```{r}
-lizard_coeffs_temp <- data.frame(emtrends(lizard_temp_time_lm, 
+lizard_coeffs_temp <- data.frame(emtrends(lizard_temp_time_lm_log, 
                                           "lizard_ID", var = "time_min")) %>%
    left_join(lizard_tmt_info, 
              by = c("lizard_ID" = "individual_ID")) %>%
@@ -668,7 +668,7 @@ ctemp_time_log
 
 ## * cloacal temp (relative) ~ time
 
-```{r c temp time}
+```{r c temp relative ~ time}
 ggplot(temp_time_series) +
    aes(x = time_min, 
        y = relative_clo_temp,
@@ -861,7 +861,7 @@ CEWL_time
 
 ## CEWL (MIN) ~ time
 
-```{r CEWL time}
+```{r CEWL time per minute}
 ggplot(by_minute_avg) +
    aes(x= time_min_block, 
        y = CEWL_min_avg,
@@ -1069,7 +1069,7 @@ ggsave(filename = "CEWL_int_body_temp.pdf",
 
 ## CEWL (MIN) ~ cloacal temperature
 
-```{r CEWL cloacal temp}
+```{r CEWL cloacal temp per minute}
 ggplot(by_minute_indiv) +
   aes(
     x = log(clo_temp_per_min),
@@ -1114,7 +1114,7 @@ ggplot(by_minute_indiv) +
 
 ## CEWL (MIN avg) ~ cloacal temperature
 
-```{r CEWL cloacal temp}
+```{r CEWL cloacal temp avg per minute}
 ggplot(by_minute_avg) +
   aes(
     x = clo_temp_min_avg,
