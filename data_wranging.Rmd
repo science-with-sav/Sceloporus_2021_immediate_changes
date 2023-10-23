@@ -28,7 +28,7 @@ library("rmdformats") # clean html R markdown format
 
 # Background
 
-This code walks through the data wrangling for the analysis of a study on the rate of change of cutaneous evaporative water loss (CEWL) in response to temperature change in Western Fence Lizards (*Sceloporus occidentalis*) (**published in the Journal __ in 2023**). Data was collected and analyzed by Calvin Davis and Savannah Weaver, under the advising of Dr. Emily Taylor at California Polytechnic State University. 
+This code walks through the data wrangling for the analysis of a study on the rate of change of cutaneous evaporative water loss (CEWL) in response to temperature change in Western Fence Lizards (*Sceloporus occidentalis*). Importantly, this is where we calculate the average CEWL values per body temperature for live lizards. Data was collected and analyzed by Calvin Davis and Savannah Weaver, under the advising of Dr. Emily Taylor at California Polytechnic State University. 
 
 
 # Load Data
@@ -1221,23 +1221,27 @@ mean_CEWL_temp <- temp_time_series %>%
   group_by(treatment, rounded_cal_c_temp) %>%
   summarise(mean_mean_CEWL = mean(mean_CEWL))
 
+# save to compare to ded lizzies
+write_rds(mean_CEWL_temp, "./Data/CEWL_by_temp_tmt.RDS")
+
 # get values for heating group only
 heat_CEWL <- mean_CEWL_temp %>%
   dplyr::filter(treatment == "Heating") %>%
   dplyr::select(treatment, rounded_cal_c_temp, heating_mm_CEWL = mean_mean_CEWL)
-write_rds(heat_CEWL, "./Data/CEWL_by_temp_heating_tmt.csv")
+#write_rds(heat_CEWL, "./Data/CEWL_by_temp_heating_tmt.RDS")
 
 # get values for cooling group only
 cool_CEWL <- mean_CEWL_temp %>%
   dplyr::filter(treatment == "Cooling")%>%
   dplyr::select(treatment, rounded_cal_c_temp, cooling_mm_CEWL = mean_mean_CEWL)
-write_rds(cool_CEWL, "./Data/CEWL_by_temp_cooling_tmt.csv")
+#write_rds(cool_CEWL, "./Data/CEWL_by_temp_cooling_tmt.RDS")
 
 # calculate the diff between groups at a common temperature
 compare_CEWL <- heat_CEWL %>%
   left_join(cool_CEWL, by = 'rounded_cal_c_temp') %>%
   mutate(diff = heating_mm_CEWL - cooling_mm_CEWL) %>%
   dplyr::filter(complete.cases(diff)) 
+compare_CEWL
 
 # summary stats
 compare_CEWL %>%
