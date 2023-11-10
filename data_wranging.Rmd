@@ -1225,7 +1225,9 @@ mean_CEWL_temp <- temp_time_series %>%
             CEWL_min = min(mean_CEWL),
             CEWL_max = max(mean_CEWL),
             n = n()) %>%
-  mutate(CEWL_sem = CEWL_sd/sqrt(n))
+  mutate(CEWL_sem = CEWL_sd/sqrt(n)) %>% 
+  # remove values calculated for n lizards < 6
+  filter(n >= 6)
 
 # save to compare to ded lizzies
 write_rds(mean_CEWL_temp, "./Data/CEWL_by_temp_tmt.RDS")
@@ -1256,6 +1258,8 @@ compare_CEWL %>%
             max_CEWL_diff = max(diff), 
             min_CEWL_diff = min(diff)) %>%
   mutate(sem_CEWL_diff = sd_CEWL_diff/sqrt(nrow(compare_CEWL)))
+
+hist(mean_CEWL_temp$n)
 ```
 
 
