@@ -528,7 +528,7 @@ ggplot(CEWL_time_temp_subset) +
             x = 14.2, y = 5, size = 2.5, color = control2) + 
 
    labs(x = "Time (minutes)" , 
-        y = bquote('CEWL (g '*m^-2*' '*h^-1*')')) -> CEWLr_time
+        y = bquote('Relative CEWL (g '*m^-2*' '*h^-1*')')) -> CEWLr_time
   
 CEWLr_time
 ```
@@ -657,7 +657,7 @@ ggplot(raw_dead_vs_CEWL_per_temp_live) +
                                  family = "sans", 
                                  size = 12),
         legend.position = "none",
-        plot.margin = margin(t = 1, r = 1, b = 1, l = 8, unit = "pt")) +
+        plot.margin = margin(t = 1, r = 1, b = 1, l = 6, unit = "pt")) +
    
   scale_x_continuous(limits = c(10, 40),
                      breaks = c(seq(10, 40, 5)),
@@ -691,37 +691,35 @@ ggplot(raw_dead_vs_CEWL_per_temp_live) +
                      name = "Treatment") + 
   
    # control group
-  annotate("text", x = 23.2, y = 32, label = "Control[Heat]", parse = T,
+  annotate("text", x = 23.2, y = 32, label = "D-Con[Heat]", parse = T,
            size = 2.5, family = "sans", color = control2) +
-  annotate("text", x = 22.5, y = 25, label = "Control[Cool]", parse = T,
+  annotate("text", x = 22.5, y = 25, label = "D-Con[Cool]", parse = T,
            size = 2.5, family = "sans", color = control1) +
-  # annotate("text", x = 24, y = 12, label = "Control", parse = T,
-  #          size = 2.9, family = "sans", color = control) +
   
   # annotations for cooling group
-  annotate("text", label = "Cooling", 
-            x = 24, y = 0, size = 2.9, color = cool) +
-  annotate("text", x = 10.5, y = 2.5, label = "T[15]", parse = T,
+  annotate("text", label = "D-Cool", 
+            x = 12, y = 6, size = 2.5, color = cool) +
+  annotate("text", x = 10.5, y = 1, label = "T[15]", parse = T,
            size = 3, family = "sans", color = cool) +
   annotate("text", x = 29, #x = 36.5, 
            y = 2.5, label = "T[1]", parse = T,
            size = 3, family = "sans", color = cool) +
   
   # annotations for heating group - dead
-  annotate("text", label = "Heating", # dead
-            x = 29.5, y = 58, size = 2.9, color = heat) +
+  annotate("text", label = "D-Heat", # dead
+            x = 29.5, y = 58, size = 2.5, color = heat) +
   annotate("text", x = 20.1, y = 40, label = "T[1]", parse = T,
            size = 3, family = "sans", color = heat) +
   annotate("text", x = 36.5, y = 67, label = "T[15]", parse = T,
            size = 3, family = "sans", color = heat) +
   
-  # annotations for heating group - live
-  # annotate("text", label = "Heating", # live
-  #           x = 21, y = 22, size = 2.9, color = heat) +
-  # annotate("text", x = 16, y = 10, label = "T[1]", parse = T,
-  #          size = 3, family = "sans", color = heat) +
-  # annotate("text", x = 39.5, y = 28, label = "T[15]", parse = T,
-  #          size = 3, family = "sans", color = heat) +
+  # annotations for live lizards
+  annotate("text", label = "L-Heat", # live
+            x = 37, y = 20, size = 2.5, color = heat) +
+  annotate("text", label = "L-Cool", # live
+            x = 37, y = 12, size = 2.5, color = cool) +
+  annotate("text", x = 25, y = 13, label = "L-Con", parse = T,
+           size = 2.5, family = "sans", color = control) +
 
    labs(x = expression('T'[b]~' (°C)'),
         y = bquote('CEWL (g '*m^-2*' '*h^-1*')')) -> dead_vs_live_fig
@@ -794,7 +792,11 @@ dead_arrange2 <- ggarrange(CEWLr_time,
                            dead_vs_live_fig,
                            nrow = 1, ncol = 2,
                            widths = c(1,1),
-                           labels = c("A", "B"))
+                           labels = c("(a)", "(b)"),
+                           font.label = list(color = "black", 
+                                             face = "bold", 
+                                             size = 10)
+                           )
 
 # export
 ggsave(filename = "dead_liz_time_temp_new.pdf",
