@@ -100,7 +100,8 @@ means <- collection_data %>%
             sd(mass_g),
             mean(SVL_mm),
             sd(SVL_mm),
-            mean(chamber_time_elapsed_min))
+            mean(chamber_time_elapsed_min),
+            sd(chamber_time_elapsed_min))
 means
 
 aov_mass <- aov(data = collection_data, mass_g ~ treatment)
@@ -1270,7 +1271,9 @@ VPD_at_CEWL <- CEWL_time_series %>%
          date = as.factor(date)) %>%
   # we want mean VPD experienced for each lizard
   group_by(lizard_ID, date, treatment) %>%
-  summarise(VPD_at_msmt = mean(VPD_kPa))
+  summarise(VPD_at_msmt = mean(VPD_kPa),
+            temp_at_msmt = mean(msmt_temp_C),
+            RH_at_msmt = mean(msmt_RH_percent))
 summary(VPD_at_CEWL)
 
 # now calculate mean sd, and range for dates and treatments
@@ -1282,7 +1285,11 @@ VPD_at_CEWL %>%
             VPD_max = max(VPD_at_msmt))
 VPD_at_CEWL %>%
   group_by(treatment) %>%
-  summarise(VPD_mean = mean(VPD_at_msmt),
+  summarise(temp_mean = mean(temp_at_msmt),
+            temp_sd = sd(temp_at_msmt),
+            RH_mean = mean(RH_at_msmt),
+            RH_sd = sd(RH_at_msmt),
+            VPD_mean = mean(VPD_at_msmt),
             VPD_sd = sd(VPD_at_msmt),
             VPD_min = min(VPD_at_msmt),
             VPD_max = max(VPD_at_msmt))
