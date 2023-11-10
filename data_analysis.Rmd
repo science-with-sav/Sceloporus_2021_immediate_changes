@@ -18,7 +18,7 @@ output:
 if (!require("tidyverse")) install.packages("tidyverse") 
 library("tidyverse") #tidyr, ggplot, dplyr, etc
 if (!require("ggpubr")) install.packages("ggpubr") 
-library("ggpubr")
+library("ggpubr") # arrange multi-panel figures
 if (!require("lme4")) install.packages("lme4") 
 library("lme4") # mixed-effect models
 if (!require("lmerTest")) install.packages("lmerTest") 
@@ -28,9 +28,9 @@ library("car") # test for VIF
 if (!require("broom.mixed")) install.packages("broom.mixed")
 library("broom.mixed") # model export
 if (!require("emmeans")) install.packages('emmeans')
-library('emmeans')
+library('emmeans') # effect sizes
 if (!require("RColorBrewer")) install.packages("RColorBrewer")
-library("RColorBrewer") # model export
+library("RColorBrewer") # pretty colors
 if (!require("rmdformats")) install.packages("rmdformats")
 library("rmdformats") # clean html R markdown format
 ```
@@ -47,11 +47,20 @@ This code walks through the statistical models and figures for a study on the ra
 Get the RDS files created in the data wrangling Rmd:
 
 ```{r}
+# treatment assignments etc
 lizard_tmt_info <- read_rds("Data/collection_dat_formatted.RDS")
+
+# data with temp AND CEWL
 temp_time_series <- read_rds("Data/temp_time_series.RDS") %>% 
   dplyr::filter(lizard_ID != 410)
+
+# data with CEWL, no body temp
 CEWL_time_series <- read_rds("Data/CEWL_time_series.RDS") # not needed???
 unique(CEWL_time_series$date)
+
+# avg CEWL per body temp
+CEWL_by_temp <- read_rds("./Data/CEWL_by_temp_tmt.RDS")
+
 
 by_minute_indiv <- temp_time_series %>% 
   mutate(time_min_block = floor(time_min)) %>% 
@@ -333,11 +342,13 @@ broom.mixed::tidy(rates_LMM_best) %>%
 
 ## Rate of Change
 
+
 ### * Tb ~ Time
 
 ```{r}
 lizard_temp_time_lm_log <- lm(data = temp_time_series, 
-                          log(calibrated_cloacal_temp) ~ log(time_min)*lizard_ID)
+                          log(calibrated_cloacal_temp) ~ 
+                            log(time_min)*lizard_ID)
 plot(lizard_temp_time_lm_log)
 ```
 
@@ -691,7 +702,7 @@ ggplot(temp_time_series) +
                                  family = "sans", 
                                  size = 12),
         legend.position = "none",
-        plot.margin = margin(t = 1, r = 1, b = 1, l = 4.3, unit = "pt")) +
+        plot.margin = margin(t = 1, r = 1, b = 1, l = 4.1, unit = "pt")) +
   
    scale_color_manual(values = c("Control" = control,
                                      "Cooling" = cool,  
@@ -763,7 +774,9 @@ ggplot() +
                                  family = "sans", 
                                  size = 12),
         legend.position = "none",
-        plot.margin = margin(t = 1, r = 1, b = 1, l = 8, unit = "pt")) +
+        plot.margin = margin(t = 1, r = 1, b = 1, l = 1, unit = "pt"),
+        axis.title.y = element_text(vjust = -3)
+        ) +
   
    scale_color_manual(values = c("Control" = control,
                                      "Cooling" = cool,  
@@ -775,15 +788,19 @@ ggplot() +
   scale_shape_manual(values = c(21,25,24),
                      name = "Treatment") + 
   
-  ylim(-1.8, 1.8) +
+  scale_y_continuous(limits = c(-0.06, 0.06),
+                     breaks = c(-0.05, 0, 0.05),
+                     labels = c(-0.05, 0, 0.05)) +
   
-   annotate("text", x = 1, y = 1.8, label = "a", size = 3) +
-   annotate("text", x = 2, y = 1.8, label = "b", size = 3) +
-   annotate("text", x = 3, y = 1.8, label = "c", size = 3) +
+  # ylim(-1.8, 1.8) + this is what I used originally... not sure what happened
+
+   annotate("text", x = 1, y = 0.06, label = "a", size = 3) +
+   annotate("text", x = 2, y = 0.06, label = "b", size = 3) +
+   annotate("text", x = 3, y = 0.06, label = "c", size = 3) +
   
-  annotate("text", x = 1, y = 1.55, label = "***", size = 4) +
-  annotate("text", x = 2, y = 1.55, label = "***", size = 4) +
-  annotate("text", x = 3, y = 1.55, label = "***", size = 4) +
+  annotate("text", x = 1, y = 0.052, label = "***", size = 4) +
+  annotate("text", x = 2, y = 0.052, label = "***", size = 4) +
+  annotate("text", x = 3, y = 0.052, label = "***", size = 4) +
   
    labs(x = "" , 
         y = expression(Delta ~ 'log-T'[b]~'  log-'*min^-1*''),
@@ -953,33 +970,50 @@ ggsave(filename = "legend_only.pdf",
 ## * CEWL (raw) ~ cloacal temperature
 
 ```{r CEWL cloacal temp}
-ggplot(temp_time_series) +
-  aes(
-    x = calibrated_cloacal_temp,
-    y = CEWL_g_m2h,
-    group = lizard_ID,
-    color = treatment
+ggplot() +
+  
+  # data per individual lizard
+  geom_line(
+    data = temp_time_series,
+    aes(
+      x = calibrated_cloacal_temp,
+      y = CEWL_g_m2h,
+      group = lizard_ID,
+      color = treatment
+    ),
+    alpha = 0.3
   ) +
-  geom_line() +
+  
+  # avg values per whole deg C
+  geom_line(
+    data = CEWL_by_temp,
+    aes(
+      x = rounded_cal_c_temp,
+      y = mean_mean_CEWL,
+      group = treatment,
+      color = treatment
+    ),
+    size = 1
+  ) +
 
   # annotations for cooling group
-   annotate(geom = "point", x = 13, y = 3, 
+   annotate(geom = "point", x = 19, y = 5.4, 
            size = 3, pch = 25, fill = cool) + 
-   annotate("text", x = 11, y = 2.5, label = "T[15]", parse = T,
+   annotate("text", x = 17.2, y = 3, label = "T[15]", parse = T,
            size = 3, family = "sans", color = cool) +
-   annotate(geom = "point", x = 36, y = 19, 
+   annotate(geom = "point", x = 34, y = 12, 
            size = 3, pch = 25, fill = cool) + 
-   annotate("text", x = 38, y = 18.5, label = "T[1]", parse = T,
+   annotate("text", x = 35.8, y = 12, label = "T[1]", parse = T,
            size = 3, family = "sans", color = cool) +
   
   # annotations for heating group
-   annotate(geom = "point", x = 15, y = 14, 
+   annotate(geom = "point", x = 17, y = 11, 
            size = 3, pch = 24, fill = heat) +  
-   annotate("text", x = 13, y = 14, label = "T[1]", parse = T,
+   annotate("text", x = 15.5, y = 11, label = "T[1]", parse = T,
            size = 3, family = "sans", color = heat) +
-   annotate(geom = "point", x = 38, y = 30, 
+   annotate(geom = "point", x = 34, y = 20, 
            size = 3, pch = 24, fill = heat) +
-   annotate("text", x = 40, y = 30, label = "T[15]", parse = T,
+   annotate("text", x = 35.5, y = 20.5, label = "T[15]", parse = T,
            size = 3, family = "sans", color = heat) +
    
    theme_classic() +
@@ -1372,7 +1406,7 @@ ggplot() +
                                  size = 12),
         legend.position = "none",
         axis.title.y = element_text(vjust = -1.8),
-        plot.margin = margin(t = 1, r = 1, b = 1, l = 1, unit = "pt")) +
+        plot.margin = margin(t = 1, r = 1, b = 1, l = 5.1, unit = "pt")) +
   
    scale_color_manual(values = c("Control" = control,
                                      "Cooling" = cool,  
@@ -1527,28 +1561,28 @@ exp_design <- read.csv("./Data/exp design.csv",
 
 ```{r make exp design figure}
 ggplot(exp_design) +
+  
+  # fake data to show exp plan
    aes(x = time_min, 
        y = temp_C,
        color = treatment) +
      geom_line(size = 1) +
+  
+  # vertical lines delineating exp stages
    geom_vline(xintercept = 60,
-              #alpha = 0.5,
+              alpha = 0.5,
               size = 0.5,
               linetype = "dashed", color = "black") +
-   geom_text(aes(30, 38, family = "sans"), label = "incubation (a)", 
-             color = "black", size = 2.5) +
    geom_vline(xintercept = 65,
-              #alpha = 0.5,
+              alpha = 0.5,
               size = 0.5,
               linetype = "dashed", color = "black") +
-   geom_text(aes(62.5, 38, family = "sans"), label = "(b)", 
-             color = "black", size = 2.5) +
    geom_vline(xintercept = 80,
-              #alpha = 0.5,
+              alpha = 0.5,
               size = 0.5,
               linetype = "dashed", color = "black") +
-   geom_text(aes(72.5, 38, family = "sans"), label = "tmt (c)", 
-             color = "black", size = 2.5) +
+  
+  # pretty-fy
    theme_classic() +
    theme(text = element_text(color = "black", 
                             family = "sans", 
@@ -1561,7 +1595,6 @@ ggplot(exp_design) +
                                  size = 12),
         legend.position = "none",
         axis.text.x = element_blank(),
-        #axis.line.x = element_blank(),
         axis.ticks.x = element_blank()) +
 
    scale_color_manual(values = c("Control" = control,
@@ -1571,13 +1604,23 @@ ggplot(exp_design) +
         y = expression('Target T'[b]~' (°C)'),
         color = "Treatment") +
    
-    annotate(geom = "point", x = 80, y = 25, 
+  # add labels for different exp stages
+  annotate("text", x = 30, y = 37, label = "(a)", parse = T,
+           size = 3.1, family = "sans", color = "black") +
+  annotate("text", x = 62.5, y = 37, label = "(b)", parse = T,
+           size = 3.1, family = "sans", color = "black") +
+  annotate("text", x = 72.5, y = 37, label = "(c)", parse = T,
+           size = 3.1, family = "sans", color = "black") +
+  
+  # add shapes to ends of lines to show tmt groups
+   annotate(geom = "point", x = 80, y = 25, 
            size = 3, pch = 21, fill = control) +
    annotate(geom = "point", x = 80, y = 20, 
            size = 3, pch = 25, fill = cool) + 
    annotate(geom = "point", x = 80, y = 30, 
            size = 3, pch = 24, fill = heat) +
   
+  # add tmt group name labels
   annotate("text", x = 35, y = 24, label = "Control", parse = T,
            size = 2.9, family = "sans", color = control) +
   annotate("text", x = 18, y = 30, label = "Cooling", parse = T,
@@ -1585,7 +1628,7 @@ ggplot(exp_design) +
   annotate("text", x = 18, y = 20, label = "Heating", parse = T,
            size = 2.9, family = "sans", color = heat) +
    
-   scale_y_continuous(limits = c(15, 38), 
+   scale_y_continuous(limits = c(15, 37), 
                       breaks=seq(15, 35, 5)) -> methods_schmatic_fig
 methods_schmatic_fig
 
@@ -1630,9 +1673,10 @@ CEWL_temp_multi <- ggarrange(
   CEWLr_time, rate_change_CEWL_fig, ctemp_time_relative, rate_change_temp_fig,
   nrow = 2, ncol = 2,
   widths = c(2,1.2),
-  labels = c("A", "B", "C", "D"),
-  label.x = 0.01,
-  label.y = 1.015
+  labels = c("(a)", "(b)", "(c)", "(d)"),
+  font.label = list(color = "black", face = "bold", size = 10),
+  label.x = 0.02,
+  label.y = 1.01
 )
 
 ggsave(filename = "CEWL_temp_relative_and_change.pdf",
@@ -1653,7 +1697,8 @@ CEWL_temp_relation <- ggarrange(
   CEWL_ctemp, rate_change_CEWL_temp_fig,
   nrow = 1, ncol = 2,
   widths = c(2,1.2),
-  labels = c("A", "B"),
+  labels = c("(a)", "(b)"),
+  font.label = list(color = "black", face = "bold", size = 10),
   #label.x = 0.01,
   label.y = 1.015
 )
