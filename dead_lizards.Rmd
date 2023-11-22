@@ -643,7 +643,8 @@ ggplot(raw_dead_vs_CEWL_per_temp_live) +
       color = liz_tmt,
       fill = liz_tmt,
       shape = liz_tmt
-    )
+    ),
+    alpha = 0.7
   ) +
  
    theme_classic() +
@@ -681,13 +682,13 @@ ggplot(raw_dead_vs_CEWL_per_temp_live) +
                                 ),
                       name = "Treatment") +
      # open shapes for dead, closed for live
-  scale_shape_manual(values = c("A control" = 1,
-                                "A cooling" = 6,
-                                "D control" = 1,
-                                "D heating" = 2,
-                                "Live - Control" = 21,
-                                "Live - Cooling" = 25,
-                                "Live - Heating" = 24),
+  scale_shape_manual(values = c("A control" = 21,
+                                "A cooling" = 21,
+                                "D control" = 21,
+                                "D heating" = 21,
+                                "Live - Control" = 1,
+                                "Live - Cooling" = 6,
+                                "Live - Heating" = 2),
                      name = "Treatment") + 
   
    # control group
@@ -697,7 +698,7 @@ ggplot(raw_dead_vs_CEWL_per_temp_live) +
            size = 2.5, family = "sans", color = control1) +
   
   # annotations for cooling group
-  annotate("text", label = "D-Cool", 
+  annotate("text", label = "D-Cool", parse = T,
             x = 12, y = 6, size = 2.5, color = cool) +
   annotate("text", x = 10.5, y = 1, label = "T[15]", parse = T,
            size = 3, family = "sans", color = cool) +
@@ -706,7 +707,7 @@ ggplot(raw_dead_vs_CEWL_per_temp_live) +
            size = 3, family = "sans", color = cool) +
   
   # annotations for heating group - dead
-  annotate("text", label = "D-Heat", # dead
+  annotate("text", label = "D-Heat",parse = T, # dead
             x = 29.5, y = 58, size = 2.5, color = heat) +
   annotate("text", x = 20.1, y = 40, label = "T[1]", parse = T,
            size = 3, family = "sans", color = heat) +
@@ -714,9 +715,9 @@ ggplot(raw_dead_vs_CEWL_per_temp_live) +
            size = 3, family = "sans", color = heat) +
   
   # annotations for live lizards
-  annotate("text", label = "L-Heat", # live
+  annotate("text", label = "L-Heat", parse = T,# live
             x = 37, y = 20, size = 2.5, color = heat) +
-  annotate("text", label = "L-Cool", # live
+  annotate("text", label = "L-Cool", parse = T,# live
             x = 37, y = 12, size = 2.5, color = cool) +
   annotate("text", x = 25, y = 13, label = "L-Con", parse = T,
            size = 2.5, family = "sans", color = control) +
@@ -799,10 +800,10 @@ dead_arrange2 <- ggarrange(CEWLr_time,
                            )
 
 # export
-ggsave(filename = "dead_liz_time_temp_new.pdf",
+ggsave(filename = "dead_liz_time_temp_new.tiff",
        plot = dead_arrange2,
        path = "./Results_Figures",
-       device = "pdf",
+       device = "tiff",
        dpi = 600,
        units = "mm",
        width = 160, height = 70)
