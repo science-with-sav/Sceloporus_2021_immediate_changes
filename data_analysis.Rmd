@@ -1633,10 +1633,10 @@ ggplot(exp_design) +
 methods_schmatic_fig
 
 # save
-ggsave(filename = "methods_schematic.pdf",
+ggsave(filename = "methods_schematic.tiff",
        plot = methods_schmatic_fig,
        path = "./Results_Figures",
-       device = "pdf",
+       device = "tiff",
        dpi = 600,
        units = "mm",
        width = 80, height = 60)
@@ -1679,10 +1679,10 @@ CEWL_temp_multi <- ggarrange(
   label.y = 1.01
 )
 
-ggsave(filename = "CEWL_temp_relative_and_change.pdf",
+ggsave(filename = "CEWL_temp_relative_and_change.tiff",
        plot = CEWL_temp_multi,
        path = "./Results_Figures",
-       device = "pdf",
+       device = "tiff",
        dpi = 600,
        units = "mm",
        width = 160, height = 140)
@@ -1703,10 +1703,10 @@ CEWL_temp_relation <- ggarrange(
   label.y = 1.015
 )
 
-ggsave(filename = "CEWL_versus_temp.pdf",
+ggsave(filename = "CEWL_versus_temp.tiff",
        plot = CEWL_temp_relation,
        path = "./Results_Figures",
-       device = "pdf",
+       device = "tiff",
        dpi = 600,
        units = "mm",
        width = 160, height = 70)
