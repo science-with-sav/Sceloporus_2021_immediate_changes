@@ -692,14 +692,15 @@ ggplot(raw_dead_vs_CEWL_per_temp_live) +
                      name = "Treatment") + 
   
    # control group
-  annotate("text", x = 23.2, y = 32, label = "D-Con[Heat]", parse = T,
+  annotate("text", x = 22.2, y = 32, label = "Deceased[Control]", # "D-Control[Heat]", 
+           parse = T,
            size = 2.5, family = "sans", color = control2) +
-  annotate("text", x = 22.5, y = 25, label = "D-Con[Cool]", parse = T,
+  annotate("text", x = 21.5, y = 25, label = "Deceased[Control]", parse = T,
            size = 2.5, family = "sans", color = control1) +
   
   # annotations for cooling group
-  annotate("text", label = "D-Cool", parse = T,
-            x = 12, y = 6, size = 2.5, color = cool) +
+  annotate("text", label = "Deceased[Cool]", parse = T,
+            x = 13, y = 6, size = 2.5, color = cool) +
   annotate("text", x = 10.5, y = 1, label = "T[15]", parse = T,
            size = 3, family = "sans", color = cool) +
   annotate("text", x = 29, #x = 36.5, 
@@ -707,19 +708,19 @@ ggplot(raw_dead_vs_CEWL_per_temp_live) +
            size = 3, family = "sans", color = cool) +
   
   # annotations for heating group - dead
-  annotate("text", label = "D-Heat",parse = T, # dead
-            x = 29.5, y = 58, size = 2.5, color = heat) +
+  annotate("text", label = "Deceased[Heat]",parse = T, # dead
+            x = 28.5, y = 58, size = 2.5, color = heat) +
   annotate("text", x = 20.1, y = 40, label = "T[1]", parse = T,
            size = 3, family = "sans", color = heat) +
   annotate("text", x = 36.5, y = 67, label = "T[15]", parse = T,
            size = 3, family = "sans", color = heat) +
   
   # annotations for live lizards
-  annotate("text", label = "L-Heat", parse = T,# live
+  annotate("text", label = "Live[Heat]", parse = T,# live
             x = 37, y = 20, size = 2.5, color = heat) +
-  annotate("text", label = "L-Cool", parse = T,# live
+  annotate("text", label = "Live[Cool]", parse = T,# live
             x = 37, y = 12, size = 2.5, color = cool) +
-  annotate("text", x = 25, y = 13, label = "L-Con", parse = T,
+  annotate("text", x = 24, y = 13, label = "Live[Control]", parse = T,
            size = 2.5, family = "sans", color = control) +
 
    labs(x = expression('T'[b]~' (°C)'),
