@@ -1,6 +1,6 @@
-# Sceloporus_2021_acute_changes
+# Sceloporus_2021_immediate_changes
 
-This repository houses all data and code associated with the publication "Cutaneous evaporative water loss in lizards changes immediately with temperature", published in _ by Calvin Davis, Savannah Weaver, and Emily Taylor. The study investigates the instantaneous change in cutaneous evaporative water loss (CEWL) in response to temperature changes in Western Fence Lizards (*Sceloporus occidentalis*).
+This repository houses all data and code associated with the publication "Cutaneous evaporative water loss in lizards changes immediately with temperature", published in EEP by Calvin Davis, Savannah Weaver, and Emily Taylor. The study investigates the instantaneous change in cutaneous evaporative water loss (CEWL) in response to temperature changes in Western Fence Lizards (*Sceloporus occidentalis*).
 
 
 ## Data
