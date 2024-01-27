@@ -1,13 +1,13 @@
 "","effect","group","term","estimate","std.error","statistic","df","p.value"
-"1","fixed",NA,"(Intercept)",15.27,2.21,6.91,5,0.00091647339164522
-"2","fixed",NA,"poly(time_min_block, 2)1",-17.82,2.12,-8.41,421,6.4679704795075e-16
-"3","fixed",NA,"poly(time_min_block, 2)2",6.5,2.14,3.03,421,0.00258175709773433
-"4","fixed",NA,"treatmentCooling",-8.44,1.31,-6.43,25,9.49404713368446e-07
-"5","fixed",NA,"treatmentHeating",2.31,1.36,1.7,25,0.101948130248189
-"6","fixed",NA,"poly(time_min_block, 2)1:treatmentCooling",-17.28,3.11,-5.56,421,4.73718539041436e-08
-"7","fixed",NA,"poly(time_min_block, 2)2:treatmentCooling",15.78,3.07,5.13,421,4.38294812285043e-07
-"8","fixed",NA,"poly(time_min_block, 2)1:treatmentHeating",41.97,3.08,13.63,421,2.72746333262604e-35
-"9","fixed",NA,"poly(time_min_block, 2)2:treatmentHeating",-14.17,3.08,-4.6,421,5.64317233946322e-06
+"1","fixed",NA,"(Intercept)",15.27,2.21,6.91,5,0.000916472563605476
+"2","fixed",NA,"poly(time_min_block, 2)1",-17.82,2.12,-8.41,421,6.46797042889099e-16
+"3","fixed",NA,"poly(time_min_block, 2)2",6.5,2.14,3.03,421,0.0025817570944273
+"4","fixed",NA,"treatmentCooling",-8.44,1.31,-6.43,25,9.49404775328412e-07
+"5","fixed",NA,"treatmentHeating",2.31,1.36,1.7,25,0.101948130741413
+"6","fixed",NA,"poly(time_min_block, 2)1:treatmentCooling",-17.28,3.11,-5.56,421,4.73718537083349e-08
+"7","fixed",NA,"poly(time_min_block, 2)2:treatmentCooling",15.78,3.07,5.13,421,4.3829481094012e-07
+"8","fixed",NA,"poly(time_min_block, 2)1:treatmentHeating",41.97,3.08,13.63,421,2.72746328458524e-35
+"9","fixed",NA,"poly(time_min_block, 2)2:treatmentHeating",-14.17,3.08,-4.6,421,5.64317232449406e-06
 "10","ran_pars","lizard_ID:date","sd__(Intercept)",3.01,NA,NA,NA,NA
 "11","ran_pars","date","sd__(Intercept)",4.49,NA,NA,NA,NA
 "12","ran_pars","Residual","sd__Observation",1.26,NA,NA,NA,NA

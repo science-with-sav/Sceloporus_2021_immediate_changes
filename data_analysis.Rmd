@@ -224,8 +224,6 @@ CEWL_temp_F_stats <- CEWL_clo_anova %>%
                 partial_sum_of_squares,
                 F_statistic, 
                 p_value)
-write.csv(CEWL_temp_F_stats, 
-          "./Results_Statistics/CEWL_temp_F_stats.csv")
 
 # model summaries
 broom.mixed::tidy(CEWL_LMM_besta) %>%
@@ -234,8 +232,7 @@ broom.mixed::tidy(CEWL_LMM_besta) %>%
          statistic = round(statistic, digits = 2),
          df = round(df, digits = 0)) %>%
   dplyr::select(effect, group, term, estimate, 
-                std.error, statistic, df, p.value) %>%
-  write.csv("./Results_Statistics/CEWL_best_model_clotemp.csv")
+                std.error, statistic, df, p.value)
 
 broom.mixed::tidy(CEWL_LMM_bestb) %>%
   mutate(estimate = round(estimate, digits = 2),
@@ -243,8 +240,7 @@ broom.mixed::tidy(CEWL_LMM_bestb) %>%
          statistic = round(statistic, digits = 2),
          df = round(df, digits = 0)) %>%
   dplyr::select(effect, group, term, estimate, 
-                std.error, statistic, df, p.value) %>%
-  write.csv("./Results_Statistics/CEWL_best_model_dorstemp.csv")
+                std.error, statistic, df, p.value)
 ```
 
 
@@ -404,6 +400,68 @@ t.test(lizard_coeffs_temp_heat$rate_change)
 
 
 
+### * Tsurf ~ Time
+
+Now do the exact same thing, but for surface body temperature
+```{r}
+lizard_tsurf_time_lm_log <- lm(data = temp_time_series, 
+                          log(calibrated_dorsal_temp) ~ 
+                            log(time_min)*lizard_ID)
+plot(lizard_tsurf_time_lm_log)
+```
+
+
+
+
+Now get the trend/slope for each individual and make into a variable in df.
+
+```{r}
+lizard_coeffs_tsurf <- data.frame(emtrends(lizard_tsurf_time_lm_log, 
+                                          "lizard_ID", var = "time_min")) %>%
+   left_join(lizard_tmt_info, 
+             by = c("lizard_ID" = "individual_ID")) %>%
+   dplyr::select(lizard_ID, rate_change = time_min.trend, 
+                 SE, df, lower.CL, upper.CL,
+                 date,
+                 treatment
+                 ) %>%
+   dplyr::mutate(date_factor = as.factor(date))
+summary(lizard_coeffs_tsurf)
+length(unique(lizard_coeffs_tsurf$lizard_ID))
+```
+
+then get average rate of change by treatment group:
+
+```{r}
+avg_tsurf_change <- lm(data = lizard_coeffs_tsurf, rate_change ~ treatment)
+summary(avg_tsurf_change)
+avg_tsurf_change_coeff <- data.frame(emmeans(avg_tsurf_change, "treatment"))
+avg_tsurf_change_coeff
+avg_tsurf_change_pairs <- data.frame(pairs(emmeans(avg_tsurf_change, "treatment")))
+avg_tsurf_change_pairs
+```
+
+
+and finally, t-tests of rate of change per tmt group:
+
+```{r}
+lizard_coeffs_tsurf_control <- lizard_coeffs_tsurf %>% 
+  dplyr::filter(treatment == "Control")
+t.test(lizard_coeffs_tsurf_control$rate_change)
+
+lizard_coeffs_tsurf_cool <- lizard_coeffs_tsurf %>% 
+  dplyr::filter(treatment == "Cooling")
+t.test(lizard_coeffs_tsurf_cool$rate_change)
+
+lizard_coeffs_tsurf_heat <- lizard_coeffs_tsurf %>% 
+  dplyr::filter(treatment == "Heating")
+t.test(lizard_coeffs_tsurf_heat$rate_change)
+```
+
+
+
+
+
 
 
 
@@ -557,7 +615,7 @@ t.test(lizard_coeffs_CEWL_heat$rate_change)
 
 
 
-### * CEWL ~ Temp
+### * CEWL ~ Tb
 
 
 ```{r}
@@ -611,6 +669,76 @@ t.test(lizard_coeffs_CEWL_temp_cool$rate_change)
 lizard_coeffs_CEWL_temp_heat <- lizard_coeffs_CEWL_temp %>% 
   dplyr::filter(treatment == "Heating")
 t.test(lizard_coeffs_CEWL_temp_heat$rate_change)
+```
+
+
+
+
+
+
+
+
+
+
+
+### * CEWL ~ Tsurf
+
+
+```{r}
+lizard_CEWL_tsurf_loglog_lm <- lm(data = temp_time_series, 
+                        log(CEWL_g_m2h) ~ log(calibrated_dorsal_temp) * lizard_ID)
+plot(lizard_CEWL_tsurf_loglog_lm)
+```
+
+
+
+
+Now get the trend/slope for each individual and make into a variable in df.
+
+```{r}
+lizard_coeffs_CEWL_tsurf <- data.frame(emtrends(lizard_CEWL_tsurf_loglog_lm, 
+                                          "lizard_ID", 
+                                          var = "calibrated_dorsal_temp")) %>%
+   left_join(lizard_tmt_info, 
+             by = c("lizard_ID" = "individual_ID")) %>%
+   dplyr::select(lizard_ID, rate_change = calibrated_dorsal_temp.trend, 
+                 SE, df, lower.CL, upper.CL,
+                 date,
+                 treatment
+                 ) %>%
+   dplyr::mutate(date_factor = as.factor(date))
+length(unique(lizard_coeffs_CEWL_tsurf$lizard_ID))
+```
+
+then get average rate of change by treatment group:
+
+```{r}
+avg_CEWL_tsurf_change <- lm(data = lizard_coeffs_CEWL_tsurf, 
+                            rate_change ~ treatment)
+summary(avg_CEWL_tsurf_change)
+avg_CEWL_tsurf_change_coeff <- data.frame(emmeans(avg_CEWL_tsurf_change, 
+                                                  "treatment"))
+avg_CEWL_tsurf_change_coeff
+avg_CEWL_tsurf_change_pairs <- data.frame(pairs(emmeans(avg_CEWL_tsurf_change,
+                                                        "treatment")))
+avg_CEWL_tsurf_change_pairs
+```
+
+
+and finally, t-tests of rate of change per tmt group:
+
+```{r}
+lizard_coeffs_CEWL_tsurf_control <- lizard_coeffs_CEWL_tsurf %>% 
+  dplyr::filter(treatment == "Control")
+t.test(lizard_coeffs_CEWL_tsurf_control$rate_change)
+
+lizard_coeffs_CEWL_tsurf_cool <- lizard_coeffs_CEWL_tsurf %>% 
+  dplyr::filter(treatment == "Cooling")
+t.test(lizard_coeffs_CEWL_tsurf_cool$rate_change)
+
+lizard_coeffs_CEWL_tsurf_heat <- lizard_coeffs_CEWL_tsurf %>% 
+  dplyr::filter(treatment == "Heating")
+t.test(lizard_coeffs_CEWL_tsurf_heat$rate_change)
 ```
 
 
