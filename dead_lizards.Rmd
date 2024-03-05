@@ -692,14 +692,14 @@ ggplot(raw_dead_vs_CEWL_per_temp_live) +
                      name = "Treatment") + 
   
    # control group
-  annotate("text", x = 22.2, y = 32, label = "Deceased[Control]", # "D-Control[Heat]", 
+  annotate("text", x = 22.2, y = 32, label = "D-Control[Heat]", 
            parse = T,
            size = 2.5, family = "sans", color = control2) +
-  annotate("text", x = 21.5, y = 25, label = "Deceased[Control]", parse = T,
+  annotate("text", x = 21.5, y = 25, label = "D-Control[Cool]", parse = T,
            size = 2.5, family = "sans", color = control1) +
   
   # annotations for cooling group
-  annotate("text", label = "Deceased[Cool]", parse = T,
+  annotate("text", label = "D-Cool", parse = T,
             x = 13, y = 6, size = 2.5, color = cool) +
   annotate("text", x = 10.5, y = 1, label = "T[15]", parse = T,
            size = 3, family = "sans", color = cool) +
@@ -708,7 +708,7 @@ ggplot(raw_dead_vs_CEWL_per_temp_live) +
            size = 3, family = "sans", color = cool) +
   
   # annotations for heating group - dead
-  annotate("text", label = "Deceased[Heat]",parse = T, # dead
+  annotate("text", label = "D-Heat",parse = T, # dead
             x = 28.5, y = 58, size = 2.5, color = heat) +
   annotate("text", x = 20.1, y = 40, label = "T[1]", parse = T,
            size = 3, family = "sans", color = heat) +
@@ -716,11 +716,11 @@ ggplot(raw_dead_vs_CEWL_per_temp_live) +
            size = 3, family = "sans", color = heat) +
   
   # annotations for live lizards
-  annotate("text", label = "Live[Heat]", parse = T,# live
+  annotate("text", label = "L-Heat", parse = T,# live
             x = 37, y = 20, size = 2.5, color = heat) +
-  annotate("text", label = "Live[Cool]", parse = T,# live
+  annotate("text", label = "L-Cool", parse = T,# live
             x = 37, y = 12, size = 2.5, color = cool) +
-  annotate("text", x = 24, y = 13, label = "Live[Control]", parse = T,
+  annotate("text", x = 24, y = 13, label = "L-Control", parse = T,
            size = 2.5, family = "sans", color = control) +
 
    labs(x = expression('T'[b]~' (°C)'),
@@ -795,6 +795,7 @@ dead_arrange2 <- ggarrange(CEWLr_time,
                            nrow = 1, ncol = 2,
                            widths = c(1,1),
                            labels = c("(a)", "(b)"),
+                           label.y = 1.015,
                            font.label = list(color = "black", 
                                              face = "bold", 
                                              size = 10)

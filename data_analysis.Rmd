@@ -1650,7 +1650,7 @@ ggplot() +
   annotate("text", x = 3, y = 0.52, label = "*", size = 4) +
   
    labs(x = "" ,
-        y = expression(Delta ~ 'log-CEWL  log-T'[b]),
+        y = expression(Delta ~ 'log-CEWL  log-T'[b]*''^-1*''),
         color = "Treatment") -> rate_change_CEWL_temp_fig
 rate_change_CEWL_temp_fig
 
@@ -1761,10 +1761,10 @@ ggplot(exp_design) +
 methods_schmatic_fig
 
 # save
-ggsave(filename = "methods_schematic.tiff",
+ggsave(filename = "methods_schematic.pdf",
        plot = methods_schmatic_fig,
        path = "./Results_Figures",
-       device = "tiff",
+       device = "pdf",
        dpi = 600,
        units = "mm",
        width = 80, height = 60)
@@ -1803,8 +1803,7 @@ CEWL_temp_multi <- ggarrange(
   widths = c(2,1.2),
   labels = c("(a)", "(b)", "(c)", "(d)"),
   font.label = list(color = "black", face = "bold", size = 10),
-  label.x = 0.02,
-  label.y = 1.01
+  label.y = 1.015
 )
 
 ggsave(filename = "CEWL_temp_relative_and_change.tiff",
@@ -1827,7 +1826,6 @@ CEWL_temp_relation <- ggarrange(
   widths = c(2,1.2),
   labels = c("(a)", "(b)"),
   font.label = list(color = "black", face = "bold", size = 10),
-  #label.x = 0.01,
   label.y = 1.015
 )
 
